@@ -121,6 +121,7 @@
     let cartoes = [];
     let compras = [];
     let parcelas = [];
+    let faturasManuais = [];
 
     let mesSelecionado = mesAtual();
     let dataSelecionada = hojeIso();
@@ -130,7 +131,8 @@
       despesas: false,
       cartoes: false,
       compras: false,
-      parcelas: false
+      parcelas: false,
+      faturasManuais: false
     };
 
     const gradeCalendario = document.getElementById("gradeCalendario");
@@ -200,35 +202,74 @@
       return { pago: "Pago", pendente: "Pendente", atrasado: "Atrasado" }[status] || "Pendente";
     }
 
+    function faturaManualDoMes(cartaoId, mes) {
+      return faturasManuais.find((fatura) =>
+        fatura.cartaoId === cartaoId && fatura.mesReferencia === mes
+      ) || null;
+    }
+
+    function parcelasConsideradasNoMes(mes) {
+      return parcelas.filter((parcela) =>
+        parcela.mesFatura === mes && !faturaManualDoMes(parcela.cartaoId, mes)
+      );
+    }
+
+    function totalFaturaCartao(cartaoId, mes) {
+      const manual = faturaManualDoMes(cartaoId, mes);
+      if (manual) return Number(manual.valor) || 0;
+      return parcelas.filter((parcela) =>
+        parcela.cartaoId === cartaoId && parcela.mesFatura === mes
+      ).reduce((soma, parcela) => soma + (Number(parcela.valor) || 0), 0);
+    }
+
+    function dataVencimentoFaturaManual(fatura) {
+      const cartao = cartoes.find((item) => item.id === fatura.cartaoId);
+      if (!cartao?.diaVencimento) return "";
+      const [ano, mes] = fatura.mesReferencia.split("-").map(Number);
+      const ultimoDia = new Date(ano, mes, 0).getDate();
+      const dia = Math.min(Number(cartao.diaVencimento) || 1, ultimoDia);
+      return `${fatura.mesReferencia}-${String(dia).padStart(2, "0")}`;
+    }
+
     function resumoDoDia(dataIso) {
       const receitasDia = receitas.filter((item) => item.data === dataIso);
       const despesasDia = despesas.filter((item) => item.data === dataIso);
-      const parcelasDia = parcelas.filter((item) => item.dataVencimento === dataIso);
+      const parcelasDia = parcelasConsideradasNoMes(mesSelecionado)
+        .filter((item) => item.dataVencimento === dataIso);
+      const faturasManuaisDia = faturasManuais.filter((fatura) =>
+        fatura.mesReferencia === mesSelecionado && dataVencimentoFaturaManual(fatura) === dataIso
+      );
       const comprasDia = compras.filter((item) => item.data === dataIso);
 
       return {
         receitas: receitasDia,
         despesas: despesasDia,
         parcelas: parcelasDia,
+        faturasManuais: faturasManuaisDia,
         compras: comprasDia,
         totalReceitas: somarValores(receitasDia),
         totalDespesas: somarValores(despesasDia),
-        totalCartoes: somarValores(parcelasDia)
+        totalCartoes: somarValores(parcelasDia) + somarValores(faturasManuaisDia)
       };
     }
 
     function renderizarResumoMes() {
       const receitasMes = receitas.filter((item) => dataPertenceAoMes(item.data, mesSelecionado));
       const despesasMes = despesas.filter((item) => dataPertenceAoMes(item.data, mesSelecionado));
-      const parcelasMes = parcelas.filter((item) => item.mesFatura === mesSelecionado);
+      const parcelasMes = parcelasConsideradasNoMes(mesSelecionado);
+      const manuaisMes = faturasManuais.filter((item) => item.mesReferencia === mesSelecionado);
 
       const recebidas = somarValores(receitasMes.filter((item) => item.status === "recebido"));
       const pagas = somarValores(despesasMes.filter((item) => item.status === "pago"));
-      const faturasAbertas = somarValores(parcelasMes.filter((item) => !item.pago));
+      const faturasAbertas = somarValores(parcelasMes.filter((item) => !item.pago))
+        + somarValores(manuaisMes.filter((item) => !item.pago));
+      const totalCartoesMes = cartoes.reduce(
+        (soma, cartao) => soma + totalFaturaCartao(cartao.id, mesSelecionado), 0
+      );
 
       resumoReceitas.textContent = formatarMoeda(somarValores(receitasMes));
       resumoDespesas.textContent = formatarMoeda(somarValores(despesasMes));
-      resumoCartoes.textContent = formatarMoeda(somarValores(parcelasMes));
+      resumoCartoes.textContent = formatarMoeda(totalCartoesMes);
 
       detalheReceitas.textContent = `${formatarMoeda(recebidas)} já recebido`;
       detalheDespesas.textContent = `${formatarMoeda(pagas)} já pago`;
@@ -251,7 +292,7 @@
         const resumo = resumoDoDia(dataIso);
         const temReceita = resumo.receitas.length > 0;
         const temDespesa = resumo.despesas.length > 0;
-        const temCartao = resumo.parcelas.length > 0 || resumo.compras.length > 0;
+        const temCartao = resumo.parcelas.length > 0 || resumo.faturasManuais.length > 0 || resumo.compras.length > 0;
         const selecionado = dataSelecionada === dataIso;
         const ehHoje = hoje === dataIso;
 
@@ -346,6 +387,17 @@
         `;
       });
 
+      const itensFaturasManuais = resumo.faturasManuais.map((item) => `
+        <article class="movimento-dia">
+          <div class="movimento-dia__cor movimento-dia__cor--cartao"></div>
+          <div class="movimento-dia__texto">
+            <strong>Total da fatura</strong>
+            <span>${escaparHtml(nomeCartao(item.cartaoId))} · informado manualmente · ${item.pago ? "Pago" : "Em aberto"}</span>
+          </div>
+          <strong class="movimento-dia__valor numero">${formatarMoeda(item.valor)}</strong>
+        </article>
+      `);
+
       const itensCompras = resumo.compras.map((item) => {
         const forma = item.recorrente
           ? "Assinatura mensal"
@@ -365,7 +417,7 @@
       const conteudo = [
         blocoLancamentos("Receitas", "receita", itensReceita),
         blocoLancamentos("Despesas", "despesa", itensDespesa),
-        blocoLancamentos("Vencimentos de cartão", "cartao", itensParcelas),
+        blocoLancamentos("Vencimentos de cartão", "cartao", [...itensParcelas, ...itensFaturasManuais]),
         blocoLancamentos("Compras realizadas", "cartao", itensCompras)
       ].join("");
 
@@ -373,35 +425,39 @@
     }
 
     function renderizarFaturasSemDia() {
-      const semDia = parcelas.filter((item) => item.mesFatura === mesSelecionado && !item.dataVencimento);
+      const cartoesSemDia = cartoes.filter((cartao) => !cartao.diaVencimento);
+      const itens = cartoesSemDia.map((cartao) => {
+        const manual = faturaManualDoMes(cartao.id, mesSelecionado);
+        const parcelasCartao = parcelasConsideradasNoMes(mesSelecionado)
+          .filter((parcela) => parcela.cartaoId === cartao.id && !parcela.dataVencimento);
+        const total = manual
+          ? (Number(manual.valor) || 0)
+          : somarValores(parcelasCartao);
+        const aberto = manual
+          ? (manual.pago ? 0 : (Number(manual.valor) || 0))
+          : somarValores(parcelasCartao.filter((parcela) => !parcela.pago));
 
-      if (!semDia.length) {
+        if (total <= 0) return null;
+        return { cartao, manual, parcelasCartao, total, aberto };
+      }).filter(Boolean);
+
+      if (!itens.length) {
         secaoFaturasSemDia.hidden = true;
         listaFaturasSemDia.innerHTML = "";
         return;
       }
 
-      const porCartao = new Map();
-      semDia.forEach((parcela) => {
-        if (!porCartao.has(parcela.cartaoId)) porCartao.set(parcela.cartaoId, []);
-        porCartao.get(parcela.cartaoId).push(parcela);
-      });
-
-      listaFaturasSemDia.innerHTML = [...porCartao.entries()]
-        .sort((a, b) => nomeCartao(a[0]).localeCompare(nomeCartao(b[0])))
-        .map(([cartaoId, itens]) => {
-          const total = somarValores(itens);
-          const aberto = somarValores(itens.filter((item) => !item.pago));
-          return `
-            <article class="fatura-sem-dia-item">
-              <div>
-                <strong>${escaparHtml(nomeCartao(cartaoId))}</strong>
-                <span>${itens.length} ${itens.length === 1 ? "lançamento" : "lançamentos"} · ${formatarMoeda(aberto)} em aberto</span>
-              </div>
-              <strong class="numero">${formatarMoeda(total)}</strong>
-            </article>
-          `;
-        }).join("");
+      listaFaturasSemDia.innerHTML = itens
+        .sort((a, b) => (a.cartao.nome || "").localeCompare(b.cartao.nome || ""))
+        .map(({ cartao, manual, parcelasCartao, total, aberto }) => `
+          <article class="fatura-sem-dia-item">
+            <div>
+              <strong>${escaparHtml(cartao.nome || "Cartão")}</strong>
+              <span>${manual ? "Total informado manualmente" : `${parcelasCartao.length} ${parcelasCartao.length === 1 ? "lançamento" : "lançamentos"}`} · ${formatarMoeda(aberto)} em aberto</span>
+            </div>
+            <strong class="numero">${formatarMoeda(total)}</strong>
+          </article>
+        `).join("");
 
       secaoFaturasSemDia.hidden = false;
     }
@@ -437,6 +493,10 @@
       observarLista(uidAtual, "parcelas", (dados) => {
         parcelas = consolidarParcelasRecorrentes(paraLista(dados));
         marcarCarregado("parcelas");
+      });
+      observarLista(uidAtual, "faturasManuais", (dados) => {
+        faturasManuais = paraLista(dados);
+        marcarCarregado("faturasManuais");
       });
     });
   </script>

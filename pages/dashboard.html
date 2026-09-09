@@ -79,6 +79,8 @@
     let despesas = [];
     let cartoes = [];
     let parcelas = [];
+    let faturasManuais = [];
+    let acertosPessoas = [];
 
     const listaFaturasDashboard = document.getElementById("listaFaturasDashboard");
     const gradeCards = document.getElementById("gradeCards");
@@ -89,6 +91,77 @@
 
     function hojeIso() {
       return new Date().toISOString().slice(0, 10);
+    }
+
+    function chavePessoa(nome) {
+      return String(nome || "")
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+    }
+
+    function faturaManualDoMes(cartaoId, mes) {
+      return faturasManuais.find((fatura) =>
+        fatura.cartaoId === cartaoId && fatura.mesReferencia === mes
+      ) || null;
+    }
+
+    function parcelasDoCartaoMes(cartaoId, mes) {
+      return parcelas.filter((parcela) =>
+        parcela.cartaoId === cartaoId && parcela.mesFatura === mes
+      );
+    }
+
+    function totalFaturaCartao(cartaoId, mes) {
+      const manual = faturaManualDoMes(cartaoId, mes);
+      if (manual) return Number(manual.valor) || 0;
+      return parcelasDoCartaoMes(cartaoId, mes)
+        .reduce((soma, parcela) => soma + (Number(parcela.valor) || 0), 0);
+    }
+
+    function restanteAcertosDoMes(mes) {
+      const nomes = new Map();
+      cartoes.filter((cartao) => cartao.tipo === "terceiro").forEach((cartao) => {
+        const nome = (cartao.titular || "Outra pessoa").trim();
+        nomes.set(chavePessoa(nome), nome);
+      });
+      despesas.forEach((despesa) => {
+        if ((despesa.data || "").slice(0, 7) !== mes || !despesa.pessoaRelacionada) return;
+        const nome = despesa.pessoaRelacionada.trim();
+        nomes.set(chavePessoa(nome), nome);
+      });
+
+      return [...nomes.values()].reduce((somaGeral, pessoa) => {
+        const chave = chavePessoa(pessoa);
+        const cartoesPessoa = cartoes.filter((cartao) =>
+          cartao.tipo === "terceiro" && chavePessoa(cartao.titular || "Outra pessoa") === chave
+        );
+        const despesasPessoa = despesas.filter((despesa) =>
+          (despesa.data || "").slice(0, 7) === mes && chavePessoa(despesa.pessoaRelacionada) === chave
+        );
+        const total = cartoesPessoa.reduce((soma, cartao) => soma + totalFaturaCartao(cartao.id, mes), 0)
+          + despesasPessoa.reduce((soma, despesa) => soma + (Number(despesa.valor) || 0), 0);
+
+        const pagamentos = acertosPessoas
+          .filter((acerto) => acerto.mesReferencia === mes && chavePessoa(acerto.pessoa) === chave)
+          .reduce((soma, acerto) => soma + (Number(acerto.valor) || 0), 0);
+
+        let legado = 0;
+        if (pagamentos <= 0) {
+          legado += cartoesPessoa.reduce((soma, cartao) => {
+            const manual = faturaManualDoMes(cartao.id, mes);
+            if (manual) return soma + (manual.pago ? (Number(manual.valor) || 0) : 0);
+            return soma + parcelasDoCartaoMes(cartao.id, mes)
+              .filter((parcela) => parcela.pago)
+              .reduce((sub, parcela) => sub + (Number(parcela.valor) || 0), 0);
+          }, 0);
+          legado += despesasPessoa.filter((despesa) => despesa.status === "pago")
+            .reduce((sub, despesa) => sub + (Number(despesa.valor) || 0), 0);
+        }
+
+        return somaGeral + Math.max(0, total - (pagamentos > 0 ? pagamentos : legado));
+      }, 0);
     }
 
     function recalcularTudo() {
@@ -113,7 +186,9 @@
 
       // Cartões: total das faturas deste mês e limite ainda disponível
       const parcelasDoMes = parcelas.filter((p) => p.mesFatura === mes);
-      const totalFaturasDoMes = parcelasDoMes.reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
+      const totalFaturasDoMes = cartoes.reduce(
+        (soma, cartao) => soma + totalFaturaCartao(cartao.id, mes), 0
+      );
       // Limite só considera cartões SEUS e que tenham limite informado
       const cartoesComLimite = cartoes.filter((c) => c.tipo !== "terceiro" && Number(c.limite) > 0);
       const idsComLimite = new Set(cartoesComLimite.map((c) => c.id));
@@ -123,11 +198,9 @@
         .reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
       const limiteDisponivel = Math.max(0, limiteTotal - limiteComprometido);
 
-      // Quanto ainda falta acertar em cartões de outras pessoas
-      const idsTerceiros = new Set(cartoes.filter((c) => c.tipo === "terceiro").map((c) => c.id));
-      const devendoATerceiros = parcelas
-        .filter((p) => !p.pago && idsTerceiros.has(p.cartaoId))
-        .reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
+      // Acertos do mês com pessoas: cartões de terceiros + despesas
+      // vinculadas, já descontando pagamentos parciais registrados.
+      const acertosEmAberto = restanteAcertosDoMes(mes);
 
       renderizarCards(gradeCards, [
         { titulo: "Saldo atual", valor: saldoAtual, tipo: saldoAtual >= 0 ? "receita" : "despesa" },
@@ -141,8 +214,8 @@
         ...(limiteTotal > 0
           ? [{ titulo: "Limite disponível", valor: limiteDisponivel, tipo: "neutro", subtitulo: "somando seus cartões com limite" }]
           : []),
-        ...(devendoATerceiros > 0
-          ? [{ titulo: "Devendo a terceiros", valor: devendoATerceiros, tipo: "alerta", subtitulo: "cartões de outras pessoas" }]
+        ...(acertosEmAberto > 0
+          ? [{ titulo: "Acertos do mês", valor: acertosEmAberto, tipo: "alerta", subtitulo: "cartões de terceiros + despesas vinculadas" }]
           : [])
       ]);
 
@@ -188,9 +261,7 @@
         listaFaturasDashboard.innerHTML = '<p class="estado-vazio">Nenhum cartão cadastrado ainda.</p>';
       } else {
         listaFaturasDashboard.innerHTML = cartoes.map((cartao) => {
-          const total = parcelasDoMes
-            .filter((p) => p.cartaoId === cartao.id)
-            .reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
+          const total = totalFaturaCartao(cartao.id, mes);
 
           return `
             <div class="item-lancamento">
@@ -254,6 +325,16 @@
 
       observarLista(uidAtual, "parcelas", (dados) => {
         parcelas = consolidarParcelasRecorrentes(paraLista(dados));
+        recalcularTudo();
+      });
+
+      observarLista(uidAtual, "faturasManuais", (dados) => {
+        faturasManuais = paraLista(dados);
+        recalcularTudo();
+      });
+
+      observarLista(uidAtual, "acertosPessoas", (dados) => {
+        acertosPessoas = paraLista(dados);
         recalcularTudo();
       });
     });

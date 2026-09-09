@@ -296,7 +296,7 @@ export function ehCartaoDeTerceiro(cartao) {
    Só mostra o que existe: se o cartão não tem limite, banco ou datas,
    essas linhas simplesmente não aparecem.
    -------------------------------------------------------------------- */
-export function renderizarCartaoVisual(cartao, resumo) {
+export function renderizarCartaoVisual(cartao, resumo, opcoes = {}) {
   const cor = cartao.cor || CORES_CARTAO[0];
   const terceiro = ehCartaoDeTerceiro(cartao);
 
@@ -323,6 +323,9 @@ export function renderizarCartaoVisual(cartao, resumo) {
     </div>
   ` : "";
 
+  const rotuloValor = opcoes.rotuloValor || (terceiro ? "Você ainda deve" : "Fatura em aberto");
+  const valorExibido = Number(opcoes.valorExibido ?? resumo.emAberto) || 0;
+
   return `
     <article class="cartao-item">
       <div class="cartao-visual" style="--cor-cartao: ${cor}">
@@ -338,9 +341,9 @@ export function renderizarCartaoVisual(cartao, resumo) {
         <div class="cartao-visual__rodape">
           <div>
             <span class="cartao-visual__rotulo">
-              ${terceiro ? "Você ainda deve" : "Fatura em aberto"}
+              ${rotuloValor}
             </span>
-            <span class="cartao-visual__valor numero">${formatarMoeda(resumo.emAberto)}</span>
+            <span class="cartao-visual__valor numero">${formatarMoeda(valorExibido)}</span>
           </div>
           ${datas ? `<div class="cartao-visual__datas">${datas}</div>` : ""}
         </div>

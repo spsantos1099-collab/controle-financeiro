@@ -122,14 +122,34 @@ da fatura e a data de vencimento já calculados, e é gravada separadamente em
 
 Cada cartão tem um tipo: **meu cartão** ou **de outra pessoa**. No segundo
 caso, o único campo obrigatório é o nome — nada de banco, bandeira ou limite,
-porque controlar limite de um cartão que não é seu não faz sentido. O valor em
-aberto passa a significar "quanto você ainda deve devolver", e o botão da
-fatura vira "Marcar como acertado".
+porque controlar limite de um cartão que não é seu não faz sentido. Para não
+transformar parcelas futuras e assinaturas em uma dívida total assustadora,
+os cartões de terceiros mostram o valor **mês a mês**, conforme o mês
+selecionado na tela.
+
+Também existe o bloco **Acertos com pessoas**. Ele soma, para cada pessoa, as
+faturas dos cartões dela e as despesas que foram vinculadas à mesma pessoa
+(ex.: uma ajuda de custo de energia para a mãe). É possível registrar
+pagamentos parciais, e o sistema mostra **Total do mês / Já pago / Falta**.
+Os pagamentos ficam registrados e podem ser apagados se houver erro.
 
 Quando o cartão não tem "melhor dia de compra" informado, o sistema usa a
 regra simples: a compra entra na fatura do próprio mês em que foi feita, e as
 parcelas seguintes caem nos meses seguintes — igual a uma planilha com uma
 aba por mês.
+
+### Total manual da fatura
+
+Não é obrigatório cadastrar compra por compra. Em cada fatura existe o botão
+**Informar total**, pensado para situações em que o usuário já acompanha as
+compras no aplicativo do cartão (corridas de 99, pequenas compras etc.). O
+valor informado manualmente vira o total oficial daquele cartão naquele mês;
+compras detalhadas que já existirem continuam visíveis, mas não são somadas
+novamente. Os dados ficam em `usuarios/{uid}/faturasManuais`.
+
+Os pagamentos feitos a uma pessoa ficam em `usuarios/{uid}/acertosPessoas`.
+Nas despesas, o campo opcional `pessoaRelacionada` permite incluir despesas
+comuns no mesmo acerto mensal.
 
 ### Assinaturas (compras recorrentes)
 

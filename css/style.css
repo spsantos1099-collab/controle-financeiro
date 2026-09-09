@@ -1638,3 +1638,230 @@ html[data-tema="escuro"] .previa-parcelas { color: var(--cor-texto); }
   .calendario-legenda { gap: var(--esp-3); }
   .calendario-dia { min-height: 52px; }
 }
+
+/* ==========================================================================
+   16. ACERTOS COM PESSOAS E FATURA MANUAL
+   ========================================================================== */
+.secao-titulo--compacta { margin-top: var(--esp-4); }
+
+.campo-opcional {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+}
+
+.campo-ajuda {
+  display: block;
+  margin-top: var(--esp-1);
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+}
+
+.aviso-formulario {
+  background: var(--cor-superficie-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  padding: var(--esp-3) var(--esp-4);
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.fatura__resumo-acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+.fatura-manual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  padding: var(--esp-3) var(--esp-4);
+  margin-bottom: var(--esp-2);
+  background: var(--cor-superficie-alt);
+  border-radius: var(--raio-sm);
+}
+
+.fatura-manual > div:first-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fatura-manual strong { font-size: 13px; }
+.fatura-manual span { font-size: 11px; color: var(--cor-texto-suave); }
+.fatura-manual__acoes { display: flex; gap: var(--esp-1); flex-shrink: 0; }
+
+.grade-acertos-pessoas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--esp-4);
+  margin-bottom: var(--esp-5);
+}
+
+.acerto-pessoa {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--esp-5);
+}
+
+.acerto-pessoa__topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-4);
+}
+
+.acerto-pessoa__rotulo,
+.acerto-pessoa__mes {
+  font-size: 11px;
+  color: var(--cor-texto-suave);
+}
+
+.acerto-pessoa__topo h3 {
+  margin-top: 2px;
+  font-size: 18px;
+}
+
+.acerto-pessoa__mes {
+  background: var(--cor-superficie-alt);
+  border-radius: 999px;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.acerto-pessoa__origens {
+  display: flex;
+  gap: var(--esp-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--esp-3);
+  margin-bottom: var(--esp-3);
+  border-bottom: 1px solid var(--cor-borda);
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.acerto-pessoa__origens strong {
+  color: var(--cor-texto);
+  margin-left: 4px;
+}
+
+.acerto-pessoa__resumo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--esp-3);
+}
+
+.acerto-pessoa__resumo > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.acerto-pessoa__resumo span {
+  font-size: 11px;
+  color: var(--cor-texto-suave);
+}
+
+.acerto-pessoa__resumo strong {
+  font-family: var(--fonte-numero);
+  font-size: 16px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.acerto-pessoa__restante strong { color: var(--cor-alerta); }
+
+.acerto-pessoa__acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: var(--esp-4);
+}
+
+.acerto-pessoa__acoes .botao-primario {
+  width: auto;
+  padding: 9px var(--esp-4);
+}
+
+.acerto-pessoa__quitado {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cor-receita);
+}
+
+.acerto-pessoa__historico {
+  margin-top: var(--esp-3);
+  padding-top: var(--esp-3);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.acerto-pessoa__historico summary {
+  cursor: pointer;
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.acerto-pessoa__pagamentos { margin-top: var(--esp-2); }
+
+.acerto-pagamento {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-3);
+  padding: var(--esp-2) 0;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.acerto-pagamento > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.acerto-pagamento strong { font-family: var(--fonte-numero); font-size: 12px; }
+.acerto-pagamento span { color: var(--cor-texto-suave); font-size: 11px; }
+
+.resumo-acerto-modal {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--esp-2);
+  margin-bottom: var(--esp-5);
+}
+
+.resumo-acerto-modal span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--esp-3);
+  border-radius: var(--raio-sm);
+  background: var(--cor-superficie-alt);
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+}
+
+.resumo-acerto-modal strong {
+  color: var(--cor-texto);
+  font-family: var(--fonte-numero);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .grade-acertos-pessoas { grid-template-columns: 1fr; }
+  .acerto-pessoa { padding: var(--esp-4); }
+  .acerto-pessoa__resumo { grid-template-columns: 1fr 1fr; }
+  .acerto-pessoa__restante { grid-column: 1 / -1; }
+  .acerto-pessoa__restante strong { font-size: 18px; }
+  .fatura__resumo-acoes { justify-content: flex-start; width: 100%; }
+  .fatura-manual { align-items: flex-start; }
+  .resumo-acerto-modal { grid-template-columns: 1fr; }
+}

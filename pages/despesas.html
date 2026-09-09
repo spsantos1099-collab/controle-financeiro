@@ -52,6 +52,7 @@
   </main>
 
   <datalist id="categoriasDespesa"></datalist>
+  <datalist id="pessoasRelacionadas"></datalist>
 
   <script type="module">
     import { observarUsuario, observarLista, adicionarRegistro, atualizarRegistro, removerRegistro } from "../js/firebase.js";
@@ -62,12 +63,14 @@
 
     let uidAtual = null;
     let despesas = [];
+    let cartoes = [];
 
     const listaDespesas = document.getElementById("listaDespesas");
     const campoBusca = document.getElementById("campoBusca");
     const filtroStatus = document.getElementById("filtroStatus");
     const filtroCategoria = document.getElementById("filtroCategoria");
     const datalistCategorias = document.getElementById("categoriasDespesa");
+    const datalistPessoas = document.getElementById("pessoasRelacionadas");
 
     document.getElementById("botaoNovaDespesa").addEventListener("click", () => abrirFormulario());
 
@@ -85,6 +88,18 @@
       filtroCategoria.innerHTML = '<option value="">Todas as categorias</option>' +
         todasCategorias.map((c) => `<option value="${c}">${c}</option>`).join("");
       filtroCategoria.value = categoriaSelecionada;
+    }
+
+    function atualizarPessoasDisponiveis() {
+      const pessoasDosCartoes = cartoes
+        .filter((cartao) => cartao.tipo === "terceiro" && cartao.titular)
+        .map((cartao) => cartao.titular.trim());
+      const pessoasDasDespesas = despesas
+        .map((despesa) => (despesa.pessoaRelacionada || "").trim())
+        .filter(Boolean);
+      const pessoas = [...new Set([...pessoasDosCartoes, ...pessoasDasDespesas])]
+        .sort((a, b) => a.localeCompare(b));
+      datalistPessoas.innerHTML = pessoas.map((nome) => `<option value="${nome}"></option>`).join("");
     }
 
     function renderizarLista() {
@@ -107,7 +122,9 @@
         <div class="linha-registro">
           <div>
             <div class="linha-registro__descricao">${d.descricao || "Sem descrição"}</div>
-            <div class="linha-registro__categoria">${d.categoria || "Sem categoria"}</div>
+            <div class="linha-registro__categoria">
+              ${d.categoria || "Sem categoria"}${d.pessoaRelacionada ? ` · para ${d.pessoaRelacionada}` : ""}
+            </div>
           </div>
           <div class="linha-registro__data">${formatarData(d.data)}</div>
           <div><span class="badge-status badge-status--${d.status}">${rotuloStatus(d.status)}</span></div>
@@ -196,6 +213,11 @@
               <label for="campoContaBancaria">Conta bancária</label>
               <input type="text" id="campoContaBancaria" value="${d.contaBancaria || ""}" placeholder="Ex: Nubank">
             </div>
+            <div class="campo-formulario">
+              <label for="campoPessoaRelacionada">Esse valor é para alguém? <span class="campo-opcional">opcional</span></label>
+              <input type="text" id="campoPessoaRelacionada" list="pessoasRelacionadas" value="${d.pessoaRelacionada || ""}" placeholder="Ex: Mãe">
+              <small class="campo-ajuda">Use quando essa despesa faz parte de um acerto com alguém.</small>
+            </div>
             <div class="campo-formulario campo-formulario--largura-total">
               <label for="campoObservacoes">Observações</label>
               <textarea id="campoObservacoes">${d.observacoes || ""}</textarea>
@@ -219,6 +241,7 @@
           status: overlay.querySelector("#campoStatus").value,
           formaPagamento: overlay.querySelector("#campoFormaPagamento").value.trim(),
           contaBancaria: overlay.querySelector("#campoContaBancaria").value.trim(),
+          pessoaRelacionada: overlay.querySelector("#campoPessoaRelacionada").value.trim(),
           observacoes: overlay.querySelector("#campoObservacoes").value.trim(),
           updatedAt: Date.now()
         };
@@ -245,7 +268,13 @@
       observarLista(uidAtual, "despesas", (dados) => {
         despesas = paraLista(dados);
         atualizarCategoriasDisponiveis();
+        atualizarPessoasDisponiveis();
         renderizarLista();
+      });
+
+      observarLista(uidAtual, "cartoes", (dados) => {
+        cartoes = paraLista(dados);
+        atualizarPessoasDisponiveis();
       });
     });
   </script>
