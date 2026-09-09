@@ -1207,3 +1207,427 @@ html[data-tema="escuro"] .previa-parcelas { color: var(--cor-texto); }
   color: var(--cor-texto-suave);
   margin-left: 2px;
 }
+
+/* ========================================================================== 
+   15. CALENDÁRIO FINANCEIRO (Etapa 8)
+   A prioridade aqui é leitura rápida. No desktop, os valores resumidos
+   aparecem dentro dos dias; no celular ficam apenas os pontos de cor e o
+   detalhe completo aparece ao tocar no dia.
+   ========================================================================== */
+
+.calendario-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  margin-bottom: var(--esp-4);
+}
+
+.calendario-topo__legenda {
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+  margin-bottom: var(--esp-1);
+}
+
+.calendario-topo__mes {
+  font-size: clamp(21px, 3vw, 28px);
+  text-transform: capitalize;
+}
+
+.calendario-navegacao {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.botao-calendario {
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0 var(--esp-3);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  font-size: 20px;
+  font-weight: 600;
+  transition: background var(--transicao-rapida), border-color var(--transicao-rapida);
+}
+
+.botao-calendario:hover {
+  background: var(--cor-superficie-alt);
+  border-color: color-mix(in srgb, var(--cor-primaria) 35%, var(--cor-borda));
+}
+
+.botao-calendario--hoje {
+  font-size: 12px;
+  padding-inline: var(--esp-4);
+}
+
+.resumo-calendario {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--esp-3);
+  margin-bottom: var(--esp-4);
+}
+
+.resumo-calendario__item {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--esp-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.resumo-calendario__item::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+}
+
+.resumo-calendario__item--receita::before { background: var(--cor-receita); }
+.resumo-calendario__item--despesa::before { background: var(--cor-despesa); }
+.resumo-calendario__item--cartao::before { background: var(--cor-info); }
+
+.resumo-calendario__rotulo,
+.resumo-calendario__detalhe {
+  display: block;
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.resumo-calendario__valor {
+  display: block;
+  margin: var(--esp-1) 0;
+  font-size: clamp(17px, 2vw, 21px);
+}
+
+.calendario-legenda {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--esp-4);
+  margin-bottom: var(--esp-3);
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.calendario-legenda > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendario-legenda__ponto,
+.calendario-mini-ponto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.calendario-legenda__ponto--receita,
+.calendario-mini-ponto--receita { background: var(--cor-receita); }
+.calendario-legenda__ponto--despesa,
+.calendario-mini-ponto--despesa { background: var(--cor-despesa); }
+.calendario-legenda__ponto--cartao,
+.calendario-mini-ponto--cartao { background: var(--cor-info); }
+
+.calendario-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.8fr);
+  gap: var(--esp-4);
+  align-items: start;
+}
+
+.calendario-card,
+.painel-dia {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-card);
+}
+
+.calendario-card { overflow: hidden; }
+
+.calendario-semana {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--cor-borda);
+  background: var(--cor-superficie-alt);
+}
+
+.calendario-semana span {
+  padding: 10px var(--esp-2);
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.calendario-grade {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendario-carregando {
+  grid-column: 1 / -1;
+  padding: var(--esp-7);
+  text-align: center;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.calendario-dia {
+  min-width: 0;
+  min-height: 104px;
+  padding: var(--esp-2);
+  text-align: left;
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  border-right: 1px solid var(--cor-borda);
+  border-bottom: 1px solid var(--cor-borda);
+  position: relative;
+  transition: background var(--transicao-rapida), box-shadow var(--transicao-rapida);
+}
+
+.calendario-dia:nth-child(7n) { border-right: none; }
+
+.calendario-dia:not(.calendario-dia--vazio):hover {
+  background: var(--cor-superficie-alt);
+}
+
+.calendario-dia--vazio {
+  background: color-mix(in srgb, var(--cor-superficie-alt) 55%, transparent);
+  cursor: default;
+}
+
+.calendario-dia--selecionado {
+  background: var(--cor-primaria-suave);
+  box-shadow: inset 0 0 0 2px var(--cor-primaria);
+  z-index: 1;
+}
+
+.calendario-dia__numero {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-family: var(--fonte-titulo);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.calendario-dia--hoje .calendario-dia__numero {
+  background: var(--cor-primaria);
+  color: var(--cor-texto-invertido);
+}
+
+.calendario-dia__indicadores {
+  display: flex;
+  gap: 4px;
+  min-height: 7px;
+  margin: var(--esp-1) 0 var(--esp-2);
+}
+
+.calendario-dia__valores {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.calendario-dia__valor {
+  font-family: var(--fonte-numero);
+  font-size: 10px;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendario-dia__valor--receita { color: var(--cor-receita); }
+.calendario-dia__valor--despesa { color: var(--cor-despesa); }
+.calendario-dia__valor--cartao { color: var(--cor-info); }
+
+.painel-dia {
+  padding: var(--esp-5);
+  min-width: 0;
+}
+
+.painel-dia__cabecalho {
+  padding-bottom: var(--esp-4);
+  margin-bottom: var(--esp-2);
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.painel-dia__rotulo {
+  display: block;
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  margin-bottom: var(--esp-1);
+}
+
+.painel-dia__cabecalho h3 {
+  font-size: 17px;
+  text-transform: capitalize;
+}
+
+.painel-dia__grupo { padding-top: var(--esp-3); }
+
+.painel-dia__grupo + .painel-dia__grupo {
+  margin-top: var(--esp-3);
+  border-top: 1px solid var(--cor-borda);
+}
+
+.painel-dia__grupo-titulo {
+  font-size: 12px;
+  font-family: var(--fonte-texto);
+  font-weight: 600;
+  margin-bottom: var(--esp-2);
+}
+
+.painel-dia__grupo-titulo--receita { color: var(--cor-receita); }
+.painel-dia__grupo-titulo--despesa { color: var(--cor-despesa); }
+.painel-dia__grupo-titulo--cartao { color: var(--cor-info); }
+
+.painel-dia__lista { display: flex; flex-direction: column; }
+
+.movimento-dia {
+  display: grid;
+  grid-template-columns: 4px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-3) 0;
+}
+
+.movimento-dia + .movimento-dia { border-top: 1px solid var(--cor-borda); }
+
+.movimento-dia__cor {
+  width: 4px;
+  height: 30px;
+  border-radius: 999px;
+}
+
+.movimento-dia__cor--receita { background: var(--cor-receita); }
+.movimento-dia__cor--despesa { background: var(--cor-despesa); }
+.movimento-dia__cor--cartao { background: var(--cor-info); }
+
+.movimento-dia__texto {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.movimento-dia__texto strong {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.movimento-dia__texto span {
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.movimento-dia__valor {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.movimento-dia__valor--receita { color: var(--cor-receita); }
+.movimento-dia__valor--despesa { color: var(--cor-despesa); }
+
+/* Compra realizada é apenas informativa: o valor que afeta a fatura
+   aparece na parcela, não é somado duas vezes no resumo do mês. */
+.movimento-dia--compra { opacity: 0.9; }
+
+.faturas-sem-dia { margin-top: var(--esp-4); }
+
+.faturas-sem-dia__cabecalho {
+  margin-bottom: var(--esp-3);
+}
+
+.faturas-sem-dia__cabecalho h2 {
+  font-size: 15px;
+  margin-bottom: 3px;
+}
+
+.faturas-sem-dia__cabecalho p {
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+
+.fatura-sem-dia-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-4);
+  padding: var(--esp-3) 0;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.fatura-sem-dia-item > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fatura-sem-dia-item > div strong { font-size: 13px; }
+.fatura-sem-dia-item > div span { color: var(--cor-texto-suave); font-size: 11px; }
+.fatura-sem-dia-item > strong { font-size: 13px; white-space: nowrap; }
+
+@media (max-width: 920px) {
+  .calendario-layout { grid-template-columns: 1fr; }
+  .painel-dia { min-height: 160px; }
+}
+
+@media (max-width: 720px) {
+  .resumo-calendario { grid-template-columns: 1fr; gap: var(--esp-2); }
+  .resumo-calendario__item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 2px var(--esp-3);
+    padding: var(--esp-3) var(--esp-4);
+  }
+  .resumo-calendario__valor { margin: 0; font-size: 17px; text-align: right; }
+  .resumo-calendario__detalhe { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .calendario-topo { align-items: flex-end; }
+  .calendario-topo__legenda { display: none; }
+  .calendario-navegacao { gap: var(--esp-1); }
+  .botao-calendario { min-width: 38px; min-height: 38px; }
+  .botao-calendario--hoje { padding-inline: 10px; }
+
+  .calendario-semana span { padding: 8px 2px; font-size: 9px; }
+  .calendario-dia { min-height: 58px; padding: 5px; }
+  .calendario-dia__numero { width: 24px; height: 24px; font-size: 11px; }
+  .calendario-dia__indicadores { margin-top: 4px; gap: 3px; }
+  .calendario-dia__valores { display: none; }
+  .calendario-mini-ponto { width: 6px; height: 6px; }
+
+  .painel-dia { padding: var(--esp-4); }
+  .movimento-dia { grid-template-columns: 4px minmax(0, 1fr); }
+  .movimento-dia__valor { grid-column: 2; justify-self: start; }
+  .fatura-sem-dia-item { align-items: flex-start; }
+}
+
+@media (max-width: 420px) {
+  .calendario-topo__mes { font-size: 19px; }
+  .calendario-legenda { gap: var(--esp-3); }
+  .calendario-dia { min-height: 52px; }
+}

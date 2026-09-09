@@ -82,11 +82,11 @@ Na Etapa 2, vamos:
 
 1. Criar juntos um projeto gratuito no [Firebase Console](https://console.firebase.google.com/),
    passo a passo, com prints explicados.
-2. Ativar o **Firestore Database** (banco de dados) e o **Authentication**
+2. Ativar o **Realtime Database** (banco de dados) e o **Authentication**
    (login com Google e com e-mail/senha).
 3. Copiar as chaves de configuração do seu projeto para dentro de
    `js/config.js`.
-4. Escrever as **regras de segurança do Firestore**, para garantir que
+4. Escrever as **regras de segurança do Realtime Database**, para garantir que
    cada usuário só enxergue os próprios dados.
 
 Você não precisa saber nada de programação para isso — vou te guiar
@@ -147,3 +147,16 @@ trás” mesmo que o app passe meses fechado.
 como o último cobrado e apaga só as cobranças futuras que ainda não foram
 pagas — o histórico de cobranças já lançadas continua intacto. Excluir, por
 outro lado, apaga a assinatura inteira e todo o histórico dela.
+
+
+## Etapa 8 — Calendário financeiro
+
+A página `pages/calendario.html` reúne receitas, despesas, compras e parcelas em uma visão mensal simples.
+
+- Receitas e despesas aparecem no dia cadastrado.
+- Compras aparecem no dia em que foram realizadas.
+- Parcelas aparecem no dia do vencimento quando o cartão possui essa informação.
+- Faturas sem dia de vencimento continuam visíveis no mês em um bloco separado; o sistema não inventa uma data.
+- No celular, o calendário mostra apenas indicadores de cor e os detalhes aparecem ao tocar no dia.
+
+O componente `components/calendario.js` concentra as funções de data e apresentação específicas dessa tela.
