@@ -119,6 +119,55 @@ export function mesFaturaDaCompra(dataCompraIso, melhorDiaCompra, diaVencimento)
    compra já existia e algumas parcelas estavam marcadas como pagas,
    a marcação é preservada ao regerar.
    -------------------------------------------------------------------- */
+/* --------------------------------------------------------------------
+   2-B. ASSINATURAS (compras recorrentes, ex: Netflix, academia)
+
+   Diferença para uma compra parcelada:
+   - Não tem número de parcelas fixo: cobra todo mês, para sempre,
+     até o usuário CANCELAR.
+   - Por isso, em vez de gerar tudo de uma vez, o sistema mantém
+     sempre um "colchão" de alguns meses gerados à frente (constante
+     abaixo) e completa esse colchão sozinho toda vez que o app é
+     aberto — assim a assinatura nunca "acaba" sem querer.
+   - Cancelar guarda o mês em que a cobrança parou (compra.dataFim) e
+     as cobranças futuras que ainda não foram pagas são apagadas; o
+     histórico de cobranças passadas continua intacto.
+   -------------------------------------------------------------------- */
+export const MESES_ANTECIPACAO_ASSINATURA = 12;
+
+export function gerarParcelasRecorrentes(compra, cartao, mesLimite, parcelasAntigas = []) {
+  const mesInicio = mesFaturaDaCompra(compra.data, cartao.melhorDiaCompra, cartao.diaVencimento);
+
+  // Se a assinatura foi cancelada antes do limite pedido, para nela
+  const mesFinal = (compra.dataFim && compra.dataFim < mesLimite) ? compra.dataFim : mesLimite;
+  if (mesFinal < mesInicio) return [];
+
+  const pagasPorMes = new Set(parcelasAntigas.filter((p) => p.pago).map((p) => p.mesFatura));
+  const diaVencimento = Number(cartao.diaVencimento) || 0;
+  const agora = Date.now();
+  const parcelas = [];
+
+  let mes = mesInicio;
+  while (mes <= mesFinal) {
+    parcelas.push({
+      compraId: compra.id,
+      cartaoId: compra.cartaoId,
+      descricao: compra.descricao,
+      categoria: compra.categoria || "",
+      recorrente: true,
+      valor: Number(compra.valorTotal) || 0,
+      mesFatura: mes,
+      dataVencimento: diaVencimento ? dataIsoSegura(mes, diaVencimento) : "",
+      pago: pagasPorMes.has(mes),
+      createdAt: agora,
+      updatedAt: agora
+    });
+    mes = somarMeses(mes, 1);
+  }
+
+  return parcelas;
+}
+
 export function gerarParcelasDaCompra(compra, cartao, parcelasAntigas = []) {
   const quantidade = Math.max(1, Number(compra.quantidadeParcelas) || 1);
   const parcelaInicial = Math.min(Math.max(1, Number(compra.parcelaInicial) || 1), quantidade);

@@ -130,3 +130,20 @@ Quando o cartão não tem "melhor dia de compra" informado, o sistema usa a
 regra simples: a compra entra na fatura do próprio mês em que foi feita, e as
 parcelas seguintes caem nos meses seguintes — igual a uma planilha com uma
 aba por mês.
+
+### Assinaturas (compras recorrentes)
+
+Ao lançar uma compra no cartão, agora existem duas abas: **Compra parcelada**
+(o que já existia) e **Assinatura mensal** — para Netflix, academia, qualquer
+cobrança que se repete todo mês sem uma quantidade fixa de parcelas.
+
+Como uma assinatura nunca "acaba" sozinha, o sistema não gera as cobranças
+todas de uma vez (seria infinito). Em vez disso, ele mantém sempre um
+colchão de 12 meses gerados à frente e completa esse colchão sozinho toda
+vez que a tela de Cartões é aberta — então a assinatura nunca fica “para
+trás” mesmo que o app passe meses fechado.
+
+**Cancelar** uma assinatura (botão 🚫 na lista de compras) marca o mês atual
+como o último cobrado e apaga só as cobranças futuras que ainda não foram
+pagas — o histórico de cobranças já lançadas continua intacto. Excluir, por
+outro lado, apaga a assinatura inteira e todo o histórico dela.

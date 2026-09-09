@@ -108,7 +108,8 @@
 
     import {
       BANDEIRAS, CORES_CARTAO, ehCartaoDeTerceiro,
-      gerarParcelasDaCompra, resumirCartao, renderizarCartaoVisual, mesFaturaDaCompra
+      gerarParcelasDaCompra, gerarParcelasRecorrentes, MESES_ANTECIPACAO_ASSINATURA,
+      resumirCartao, renderizarCartaoVisual, mesFaturaDaCompra
     } from "../components/cartoes.js";
 
     import { CATEGORIAS_DESPESA_PADRAO } from "../js/config.js";
@@ -235,7 +236,9 @@
                   <div class="linha-parcela__descricao">${p.descricao || "Sem descrição"}</div>
                   <div class="linha-parcela__categoria">${p.categoria || "Sem categoria"}</div>
                 </div>
-                <span class="chip-parcela">${p.numero}/${p.totalParcelas}</span>
+                <span class="chip-parcela ${p.recorrente ? "chip-parcela--assinatura" : ""}">
+                  ${p.recorrente ? "↻ assinatura" : `${p.numero}/${p.totalParcelas}`}
+                </span>
                 <div class="linha-parcela__valor numero">${formatarMoeda(p.valor)}</div>
                 <button class="botao-icone" title="${p.pago ? "Marcar como não paga" : "Marcar como paga"}"
                         data-acao="alternar-parcela" data-id="${p.id}">
@@ -286,26 +289,39 @@
         return;
       }
 
+      const hoje = mesAtual();
+
       listaCompras.innerHTML = filtradas.map((compra) => {
         const cartao = cartoes.find((c) => c.id === compra.cartaoId);
         const quantidade = Number(compra.quantidadeParcelas) || 1;
+
+        const chip = compra.recorrente
+          ? `<span class="chip-parcela chip-parcela--assinatura">↻ Mensal</span>`
+          : `<span class="chip-parcela">${quantidade}x</span>`;
+
+        const canceladaEm = compra.recorrente && compra.dataFim
+          ? ` · <span class="badge-cancelada">cobrança até ${formatarMesAno(compra.dataFim)}</span>`
+          : "";
+
+        const podeCancelar = compra.recorrente && (!compra.dataFim || compra.dataFim >= hoje);
 
         return `
           <div class="linha-registro">
             <div>
               <div class="linha-registro__descricao">${compra.descricao || "Sem descrição"}</div>
               <div class="linha-registro__categoria">
-                ${cartao ? cartao.nome : "Cartão excluído"} · ${compra.categoria || "Sem categoria"}
+                ${cartao ? cartao.nome : "Cartão excluído"} · ${compra.categoria || "Sem categoria"}${canceladaEm}
               </div>
             </div>
-            <div class="linha-registro__data">${formatarData(compra.data)}</div>
-            <div><span class="chip-parcela">${quantidade}x</span></div>
+            <div class="linha-registro__data">${compra.recorrente ? "desde " + formatarData(compra.data) : formatarData(compra.data)}</div>
+            <div>${chip}</div>
             <div class="linha-registro__valor numero" style="color: var(--cor-despesa)">
-              ${formatarMoeda(compra.valorTotal)}
+              ${formatarMoeda(compra.valorTotal)}${compra.recorrente ? "<span class=\"linha-registro__por-mes\">/mês</span>" : ""}
             </div>
             <div class="linha-registro__acoes">
               <button class="botao-icone" title="Editar" data-acao="editar-compra" data-id="${compra.id}">✏️</button>
               <button class="botao-icone" title="Duplicar" data-acao="duplicar-compra" data-id="${compra.id}">⧉</button>
+              ${podeCancelar ? `<button class="botao-icone" title="Cancelar assinatura" data-acao="cancelar-assinatura" data-id="${compra.id}">🚫</button>` : ""}
               <button class="botao-icone botao-icone--perigo" title="Excluir" data-acao="excluir-compra" data-id="${compra.id}">🗑️</button>
             </div>
           </div>
@@ -388,26 +404,60 @@
         const cartao = cartoes.find((c) => c.id === original?.cartaoId);
         if (!original || !cartao) return;
 
-        const { id: ignorado, ...dados } = original;
-        await salvarCompra({ ...dados, createdAt: Date.now(), updatedAt: Date.now() }, cartao);
-        mostrarToast("Compra duplicada, com as parcelas!", "sucesso");
+        // Ao duplicar, a cópia nasce sem data de cancelamento, mesmo
+        // que a assinatura original já tenha sido cancelada. E, sendo
+        // assinatura, começa a cobrar a partir de hoje (não do passado).
+        const { id: ignorado, dataFim: cancelamentoAntigo, ...dados } = original;
+        const dataDaCopia = dados.recorrente ? hojeIso() : dados.data;
+        await salvarCompra({ ...dados, data: dataDaCopia, createdAt: Date.now(), updatedAt: Date.now() }, cartao);
+        mostrarToast(dados.recorrente ? "Assinatura duplicada!" : "Compra duplicada, com as parcelas!", "sucesso");
+      }
+
+      if (acao === "cancelar-assinatura") {
+        const compra = compras.find((c) => c.id === id);
+        if (!compra) return;
+
+        const confirmou = await confirmarAcao(
+          `A partir de agora, "${compra.descricao}" não vai gerar mais cobranças novas. As cobranças já lançadas (inclusive a deste mês, se já existir) continuam valendo — isso só afeta os meses futuros.`,
+          { titulo: "Cancelar assinatura", rotuloConfirmar: "Cancelar assinatura" }
+        );
+        if (!confirmou) return;
+
+        const dataFim = mesAtual();
+
+        try {
+          await atualizarRegistro(uidAtual, "compras", id, { dataFim, updatedAt: Date.now() });
+
+          // Remove só as cobranças futuras que ainda não foram pagas;
+          // o que já foi lançado (passado ou já pago) fica intacto.
+          const futurasNaoPagas = parcelas.filter(
+            (p) => p.compraId === id && !p.pago && p.mesFatura > dataFim
+          );
+          await Promise.all(futurasNaoPagas.map((p) => removerRegistro(uidAtual, "parcelas", p.id)));
+
+          mostrarToast("Assinatura cancelada.", "sucesso");
+        } catch (erro) {
+          mostrarToast("Não foi possível cancelar a assinatura.", "erro");
+        }
       }
 
       if (acao === "excluir-compra") {
         const compra = compras.find((c) => c.id === id);
         if (!compra) return;
 
-        const confirmou = await confirmarExclusao(
-          `Excluir a compra "${compra.descricao}"? Todas as parcelas dela serão apagadas.`
-        );
+        const mensagem = compra.recorrente
+          ? `Excluir a assinatura "${compra.descricao}"? Todo o histórico de cobranças dela será apagado.`
+          : `Excluir a compra "${compra.descricao}"? Todas as parcelas dela serão apagadas.`;
+
+        const confirmou = await confirmarExclusao(mensagem);
         if (!confirmou) return;
 
         try {
           await removerParcelasDaCompra(id);
           await removerRegistro(uidAtual, "compras", id);
-          mostrarToast("Compra excluída.", "sucesso");
+          mostrarToast(compra.recorrente ? "Assinatura excluída." : "Compra excluída.", "sucesso");
         } catch (erro) {
-          mostrarToast("Não foi possível excluir a compra.", "erro");
+          mostrarToast("Não foi possível excluir.", "erro");
         }
       }
     });
@@ -591,9 +641,17 @@
 
       const editando = Boolean(compraExistente);
       const c = compraExistente || {};
+      let tipoAtual = c.recorrente ? "recorrente" : "parcelado";
 
       const overlay = abrirModal(`
         <h3 class="modal-titulo">${editando ? "Editar compra" : "Nova compra no cartão"}</h3>
+
+        <!-- Escolha do tipo: muda o rótulo do valor e quais campos aparecem -->
+        <div class="abas-login" id="abasTipoCompra">
+          <button type="button" class="aba-login" data-tipo="parcelado">Compra parcelada</button>
+          <button type="button" class="aba-login" data-tipo="recorrente">Assinatura mensal</button>
+        </div>
+
         <form id="formularioCompra">
           <div class="grade-formulario">
             <div class="campo-formulario campo-formulario--largura-total">
@@ -606,24 +664,28 @@
             </div>
             <div class="campo-formulario campo-formulario--largura-total">
               <label for="campoDescricao">Descrição</label>
-              <input type="text" id="campoDescricao" required value="${c.descricao || ""}" placeholder="Ex: Notebook">
+              <input type="text" id="campoDescricao" required value="${c.descricao || ""}"
+                     placeholder="Ex: Notebook ou Netflix">
             </div>
             <div class="campo-formulario">
-              <label for="campoValorTotal">Valor total (R$)</label>
+              <label id="rotuloValor" for="campoValorTotal">Valor total (R$)</label>
               <input type="number" id="campoValorTotal" step="0.01" min="0" required value="${c.valorTotal ?? ""}" placeholder="1200.00">
             </div>
             <div class="campo-formulario">
-              <label for="campoData">Data da compra</label>
+              <label id="rotuloData" for="campoData">Data da compra</label>
               <input type="date" id="campoData" required value="${c.data || hojeIso()}">
             </div>
-            <div class="campo-formulario">
+
+            <!-- Só para compra parcelada -->
+            <div class="campo-formulario" data-so-parcelado>
               <label for="campoQuantidadeParcelas">Número de parcelas</label>
-              <input type="number" id="campoQuantidadeParcelas" min="1" max="72" required value="${c.quantidadeParcelas ?? 1}">
+              <input type="number" id="campoQuantidadeParcelas" min="1" max="72" value="${c.quantidadeParcelas ?? 1}">
             </div>
-            <div class="campo-formulario">
+            <div class="campo-formulario" data-so-parcelado>
               <label for="campoParcelaInicial">Parcela atual</label>
               <input type="number" id="campoParcelaInicial" min="1" max="72" value="${c.parcelaInicial ?? 1}">
             </div>
+
             <div class="campo-formulario campo-formulario--largura-total">
               <label for="campoCategoria">Categoria</label>
               <input type="text" id="campoCategoria" list="categoriasDespesa" value="${c.categoria || ""}" placeholder="Escolha ou digite uma nova">
@@ -650,20 +712,50 @@
         parcelaInicial: overlay.querySelector("#campoParcelaInicial")
       };
       const previa = overlay.querySelector("#previaParcelas");
+      const rotuloValor = overlay.querySelector("#rotuloValor");
+      const rotuloData = overlay.querySelector("#rotuloData");
 
-      // Mostra, enquanto o usuário digita, como o sistema vai dividir a compra
+      // Alterna entre "compra parcelada" e "assinatura mensal": muda os
+      // rótulos e esconde os campos que não fazem sentido em cada caso
+      function aplicarTipo(tipo) {
+        tipoAtual = tipo;
+
+        overlay.querySelectorAll("#abasTipoCompra .aba-login").forEach((aba) => {
+          aba.classList.toggle("ativa", aba.dataset.tipo === tipo);
+        });
+        overlay.querySelectorAll("[data-so-parcelado]").forEach((elemento) => {
+          elemento.hidden = tipo !== "parcelado";
+        });
+
+        rotuloValor.textContent = tipo === "recorrente" ? "Valor cobrado por mês (R$)" : "Valor total (R$)";
+        rotuloData.textContent = tipo === "recorrente" ? "Cobrando desde" : "Data da compra";
+
+        atualizarPrevia();
+      }
+
+      // Mostra, enquanto o usuário digita, como o sistema vai lançar a compra
       function atualizarPrevia() {
         const cartao = cartoes.find((item) => item.id === campos.cartao.value);
         const valorTotal = Number(campos.valorTotal.value) || 0;
-        const quantidade = Math.max(1, Number(campos.quantidade.value) || 1);
-        const inicial = Math.min(Math.max(1, Number(campos.parcelaInicial.value) || 1), quantidade);
 
         if (!cartao || !valorTotal || !campos.data.value) {
-          previa.textContent = "Preencha o valor e a data para ver como as parcelas serão distribuídas.";
+          previa.textContent = "Preencha o valor e a data para ver como as cobranças serão lançadas.";
           return;
         }
 
         const primeiraFatura = mesFaturaDaCompra(campos.data.value, cartao.melhorDiaCompra, cartao.diaVencimento);
+
+        if (tipoAtual === "recorrente") {
+          previa.innerHTML = `
+            <strong>${formatarMoeda(valorTotal)} todo mês</strong><br>
+            Começa na fatura de <strong>${formatarMesAno(primeiraFatura)}</strong> e continua
+            automaticamente, sem data para acabar — você cancela quando quiser.
+          `;
+          return;
+        }
+
+        const quantidade = Math.max(1, Number(campos.quantidade.value) || 1);
+        const inicial = Math.min(Math.max(1, Number(campos.parcelaInicial.value) || 1), quantidade);
         const ultimaFatura = somarMeses(primeiraFatura, quantidade - inicial);
         const restantes = quantidade - inicial + 1;
 
@@ -675,11 +767,16 @@
         `;
       }
 
+      overlay.querySelector("#abasTipoCompra").addEventListener("click", (evento) => {
+        const aba = evento.target.closest("[data-tipo]");
+        if (aba) aplicarTipo(aba.dataset.tipo);
+      });
+
       Object.values(campos).forEach((campo) => {
         campo.addEventListener("input", atualizarPrevia);
         campo.addEventListener("change", atualizarPrevia);
       });
-      atualizarPrevia();
+      aplicarTipo(tipoAtual);
 
       overlay.querySelector("#formularioCompra").addEventListener("submit", async (evento) => {
         evento.preventDefault();
@@ -694,26 +791,38 @@
           cartaoId: cartao.id,
           descricao: overlay.querySelector("#campoDescricao").value.trim(),
           valorTotal: Number(campos.valorTotal.value),
-          quantidadeParcelas: Math.max(1, Number(campos.quantidade.value) || 1),
-          parcelaInicial: Math.max(1, Number(campos.parcelaInicial.value) || 1),
+          recorrente: tipoAtual === "recorrente",
           categoria: overlay.querySelector("#campoCategoria").value.trim(),
           data: campos.data.value,
           observacoes: overlay.querySelector("#campoObservacoes").value.trim(),
           updatedAt: Date.now()
         };
 
+        if (tipoAtual === "parcelado") {
+          dados.quantidadeParcelas = Math.max(1, Number(campos.quantidade.value) || 1);
+          dados.parcelaInicial = Math.max(1, Number(campos.parcelaInicial.value) || 1);
+          // Se estava cancelada e virou parcelada, limpa a marcação antiga
+          dados.dataFim = null;
+        } else {
+          dados.quantidadeParcelas = null;
+          dados.parcelaInicial = null;
+        }
+
         try {
           if (editando) {
             await atualizarRegistro(uidAtual, "compras", compraExistente.id, dados);
 
-            // Regera as parcelas do zero, preservando as que já estavam pagas
+            // Regera as cobranças do zero, preservando as que já estavam pagas
             const antigas = parcelas.filter((p) => p.compraId === compraExistente.id);
             await removerParcelasDaCompra(compraExistente.id);
-            await criarParcelas({ ...dados, id: compraExistente.id }, cartao, antigas);
-            mostrarToast("Compra e parcelas atualizadas!", "sucesso");
+            await criarParcelas({ ...c, ...dados, id: compraExistente.id }, cartao, antigas);
+            mostrarToast("Compra atualizada!", "sucesso");
           } else {
             await salvarCompra({ ...dados, createdAt: Date.now() }, cartao);
-            mostrarToast("Compra lançada e parcelas criadas!", "sucesso");
+            mostrarToast(
+              tipoAtual === "recorrente" ? "Assinatura cadastrada!" : "Compra lançada e parcelas criadas!",
+              "sucesso"
+            );
           }
           fecharModal();
         } catch (erro) {
@@ -733,10 +842,63 @@
     }
 
     async function criarParcelas(compra, cartao, parcelasAntigas = []) {
-      const novasParcelas = gerarParcelasDaCompra(compra, cartao, parcelasAntigas);
+      const novasParcelas = compra.recorrente
+        ? gerarParcelasRecorrentes(
+            compra, cartao,
+            somarMeses(mesAtual(), MESES_ANTECIPACAO_ASSINATURA - 1),
+            parcelasAntigas
+          )
+        : gerarParcelasDaCompra(compra, cartao, parcelasAntigas);
+
       await Promise.all(
         novasParcelas.map((parcela) => adicionarRegistro(uidAtual, "parcelas", parcela))
       );
+    }
+
+    /* --------------------------------------------------------------
+       COLCHÃO DE MESES DAS ASSINATURAS
+       Toda vez que os dados chegam do banco, confere se alguma
+       assinatura ativa está "ficando para trás" (a última cobrança já
+       gerada está a menos de MESES_ANTECIPACAO_ASSINATURA meses de
+       hoje) e completa sozinha os meses que faltam — sem precisar que
+       o usuário abra e feche o formulário. Assim a assinatura nunca
+       "acaba" sem querer só porque o app ficou muito tempo fechado.
+       -------------------------------------------------------------- */
+    let sincronizandoAssinaturas = false;
+
+    async function sincronizarAssinaturas() {
+      if (sincronizandoAssinaturas || !uidAtual) return;
+
+      const mesLimite = somarMeses(mesAtual(), MESES_ANTECIPACAO_ASSINATURA - 1);
+
+      const pendentes = compras.filter((compra) => {
+        if (!compra.recorrente) return false;
+        // Já cancelada há tempo: não precisa completar nada
+        if (compra.dataFim && compra.dataFim < mesAtual()) return false;
+
+        const cartao = cartoes.find((cartaoItem) => cartaoItem.id === compra.cartaoId);
+        if (!cartao) return false;
+
+        const mesesGerados = parcelas.filter((p) => p.compraId === compra.id).map((p) => p.mesFatura);
+        const ultimoMesGerado = mesesGerados.length ? mesesGerados.sort().at(-1) : null;
+        const alvo = (compra.dataFim && compra.dataFim < mesLimite) ? compra.dataFim : mesLimite;
+
+        return !ultimoMesGerado || ultimoMesGerado < alvo;
+      });
+
+      if (!pendentes.length) return;
+
+      sincronizandoAssinaturas = true;
+      try {
+        for (const compra of pendentes) {
+          const cartao = cartoes.find((cartaoItem) => cartaoItem.id === compra.cartaoId);
+          const antigas = parcelas.filter((p) => p.compraId === compra.id);
+          await removerParcelasDaCompra(compra.id);
+          await criarParcelas(compra, cartao, antigas);
+        }
+      } finally {
+        sincronizandoAssinaturas = false;
+      }
     }
 
     async function removerParcelasDaCompra(compraId) {
@@ -758,17 +920,20 @@
         renderizarCartoes();
         renderizarFaturas();
         renderizarCompras();
+        sincronizarAssinaturas();
       });
 
       observarLista(uidAtual, "compras", (dados) => {
         compras = paraLista(dados);
         renderizarCompras();
+        sincronizarAssinaturas();
       });
 
       observarLista(uidAtual, "parcelas", (dados) => {
         parcelas = paraLista(dados);
         renderizarCartoes();
         renderizarFaturas();
+        sincronizarAssinaturas();
       });
     });
 

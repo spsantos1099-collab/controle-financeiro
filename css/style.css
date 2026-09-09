@@ -1184,3 +1184,26 @@ html[data-tema="escuro"] .previa-parcelas { color: var(--cor-texto); }
   cursor: pointer;
   font-family: var(--fonte-texto);
 }
+
+/* --------------------------------------------------------------------
+   Assinaturas (compras recorrentes no cartão)
+   -------------------------------------------------------------------- */
+.chip-parcela--assinatura {
+  background: color-mix(in srgb, var(--cor-info) 15%, transparent);
+  color: var(--cor-info);
+  font-family: var(--fonte-texto);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-cancelada {
+  color: var(--cor-alerta);
+  font-weight: 500;
+}
+
+.linha-registro__por-mes {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+  margin-left: 2px;
+}
