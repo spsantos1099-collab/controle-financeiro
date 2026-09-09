@@ -17,7 +17,7 @@ export function criarGraficoBarras(container, dados) {
   }
 
   const largura = 640;
-  const altura = 260;
+  const altura = 210;
   const margemBaixo = 28;
   const margemTopo = 12;
   const alturaUtil = altura - margemBaixo - margemTopo;
@@ -35,15 +35,15 @@ export function criarGraficoBarras(container, dados) {
         <rect x="${centroGrupo - larguraBarra - 3}" y="${margemTopo + alturaUtil - alturaReceita}"
               width="${larguraBarra}" height="${alturaReceita}" rx="3"
               fill="var(--cor-receita)">
-          <title>Receitas ${ponto.label}: ${formatarMoeda(ponto.receita)}</title>
+          <title>Entradas ${ponto.label}: ${formatarMoeda(ponto.receita)}</title>
         </rect>
         <rect x="${centroGrupo + 3}" y="${margemTopo + alturaUtil - alturaDespesa}"
               width="${larguraBarra}" height="${alturaDespesa}" rx="3"
               fill="var(--cor-despesa)">
-          <title>Despesas ${ponto.label}: ${formatarMoeda(ponto.despesa)}</title>
+          <title>Saídas ${ponto.label}: ${formatarMoeda(ponto.despesa)}</title>
         </rect>
         <text x="${centroGrupo}" y="${altura - 6}" text-anchor="middle"
-              fill="var(--cor-texto-suave)" font-size="11" font-family="Inter, sans-serif">
+              fill="var(--cor-texto-suave)" font-size="11">
           ${ponto.label}
         </text>
       </g>
@@ -51,7 +51,7 @@ export function criarGraficoBarras(container, dados) {
   }).join("");
 
   container.innerHTML = `
-    <svg viewBox="0 0 ${largura} ${altura}" width="100%" role="img" aria-label="Gráfico de receitas e despesas por mês">
+    <svg viewBox="0 0 ${largura} ${altura}" width="100%" role="img" aria-label="Gráfico de entradas recebidas e saídas pagas por mês">
       <line x1="0" y1="${margemTopo + alturaUtil}" x2="${largura}" y2="${margemTopo + alturaUtil}" stroke="var(--cor-borda)" />
       ${barras}
     </svg>

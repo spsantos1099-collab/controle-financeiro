@@ -7,12 +7,12 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------
-   1. FONTES
-   - Sora: títulos e números grandes (visual mais "app financeiro")
-   - Inter: textos e rótulos (ótima legibilidade em telas pequenas)
-   - IBM Plex Mono: valores em R$ e tabelas (números alinhados)
+   1. TIPOGRAFIA
+   Geist em toda a interface: desenho neutro, sóbrio e legível.
+   Valores usam algarismos tabulares para manter o alinhamento sem recorrer
+   a uma fonte monoespaçada, deixando a interface menos “template”.
    -------------------------------------------------------------------- */
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
 
 /* --------------------------------------------------------------------
    2. TOKENS DE COR — TEMA CLARO (padrão)
@@ -41,9 +41,9 @@
   --cor-texto-invertido: #FFFFFF;
 
   /* Tipografia */
-  --fonte-titulo: 'Sora', sans-serif;
-  --fonte-texto: 'Inter', sans-serif;
-  --fonte-numero: 'IBM Plex Mono', monospace;
+  --fonte-titulo: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --fonte-texto: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --fonte-numero: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
   /* Espaçamento (escala base 4px) */
   --esp-1: 4px;
@@ -56,10 +56,10 @@
   --esp-8: 64px;
 
   /* Raio e sombra */
-  --raio-sm: 8px;
-  --raio-md: 14px;
-  --raio-lg: 22px;
-  --sombra-card: 0 1px 2px rgba(18, 24, 31, 0.04), 0 8px 24px rgba(18, 24, 31, 0.06);
+  --raio-sm: 7px;
+  --raio-md: 10px;
+  --raio-lg: 14px;
+  --sombra-card: 0 1px 2px rgba(18, 24, 31, 0.04), 0 5px 16px rgba(18, 24, 31, 0.04);
 
   /* Transições */
   --transicao-rapida: 150ms ease;
@@ -106,7 +106,6 @@ body {
   font-family: var(--fonte-texto);
   font-size: 15px;
   line-height: 1.5;
-  transition: background var(--transicao-suave), color var(--transicao-suave);
   min-height: 100vh;
 }
 
@@ -117,7 +116,7 @@ h1, h2, h3, h4 {
   letter-spacing: -0.01em;
 }
 
-/* Números financeiros usam a fonte monoespaçada em todo o sistema */
+/* Números financeiros usam algarismos tabulares para leitura rápida. */
 .numero, .valor {
   font-family: var(--fonte-numero);
   font-variant-numeric: tabular-nums;
@@ -1831,6 +1830,24 @@ html[data-tema="escuro"] .previa-parcelas { color: var(--cor-texto); }
 .acerto-pagamento strong { font-family: var(--fonte-numero); font-size: 12px; }
 .acerto-pagamento span { color: var(--cor-texto-suave); font-size: 11px; }
 
+.acerto-pagamento__acoes {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.acerto-pagamento__importado {
+  flex: 0 0 auto;
+  color: var(--cor-texto-suave);
+  background: var(--cor-superficie-alt);
+  border: 1px solid var(--cor-borda);
+  border-radius: 999px;
+  padding: 3px 7px;
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
 .resumo-acerto-modal {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1864,4 +1881,495 @@ html[data-tema="escuro"] .previa-parcelas { color: var(--cor-texto); }
   .fatura__resumo-acoes { justify-content: flex-start; width: 100%; }
   .fatura-manual { align-items: flex-start; }
   .resumo-acerto-modal { grid-template-columns: 1fr; }
+}
+
+/* ==========================================================================\n   17. REFINAMENTO VISUAL — interface mais sóbria e compacta\n   ========================================================================== */
+
+html {
+  background: var(--cor-fundo);
+  color-scheme: light;
+}
+html[data-tema="escuro"] { color-scheme: dark; }
+
+@view-transition { navigation: auto; }
+::view-transition-old(root),
+::view-transition-new(root) { animation-duration: 120ms; animation-timing-function: ease-out; }
+
+body {
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  background: var(--cor-fundo);
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.025em;
+}
+
+.numero, .valor {
+  font-family: var(--fonte-numero);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.02em;
+}
+
+.container { max-width: 1180px; }
+.pagina-app { padding-top: 24px; padding-bottom: 48px; }
+
+.card {
+  border-radius: var(--raio-md);
+  box-shadow: none;
+  padding: 18px;
+}
+
+.topo-app {
+  margin-bottom: 14px;
+  padding-bottom: 16px;
+}
+
+.topo-app__titulo {
+  font-size: 23px;
+  font-weight: 650;
+}
+
+.topo-app__subtitulo {
+  margin-top: 4px;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+}
+
+.topo-app__usuario {
+  font-size: 12px;
+  gap: 10px;
+}
+
+.topo-app__usuario strong {
+  color: var(--cor-texto);
+  font-weight: 550;
+}
+
+.botao-sair {
+  font-size: 12px;
+  padding: 6px 9px;
+  border-radius: 7px;
+}
+
+/* Navegação plana, mais próxima de um produto financeiro profissional. */
+.nav-paginas {
+  flex-wrap: nowrap;
+  gap: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+.nav-paginas::-webkit-scrollbar { display: none; }
+
+.nav-paginas a {
+  flex: 0 0 auto;
+  padding: 10px 0 11px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--cor-texto-suave);
+  font-size: 13px;
+  font-weight: 550;
+}
+.nav-paginas a:hover {
+  background: transparent;
+  color: var(--cor-texto);
+}
+.nav-paginas a.ativa {
+  background: transparent;
+  color: var(--cor-texto);
+  border-bottom-color: var(--cor-primaria);
+}
+
+.botao-primario,
+.botao-novo {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.botao-secundario {
+  border-radius: 8px;
+  font-weight: 550;
+}
+
+.botao-secundario--compacto {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.botao-texto {
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+  font-weight: 550;
+  padding: 5px 0;
+}
+.botao-texto:hover { color: var(--cor-primaria); }
+
+.estado-vazio--compacto { padding: 14px 0; }
+.valor-receita { color: var(--cor-receita) !important; }
+.valor-despesa { color: var(--cor-despesa) !important; }
+
+/* --------------------------------------------------------------------------\n   Dashboard enxuto\n   -------------------------------------------------------------------------- */
+.dashboard-principal {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.dashboard-card {
+  min-width: 0;
+  min-height: 126px;
+  padding: 16px;
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: 11px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+}
+
+.dashboard-card--destaque {
+  border-color: color-mix(in srgb, var(--cor-primaria) 34%, var(--cor-borda));
+  background: color-mix(in srgb, var(--cor-primaria-suave) 52%, var(--cor-superficie));
+}
+
+.dashboard-card__rotulo {
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.dashboard-card__valor {
+  color: var(--cor-texto);
+  font-size: clamp(21px, 2.2vw, 27px);
+  line-height: 1.15;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-card__apoio {
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.dashboard-indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: var(--cor-superficie);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.dashboard-indicador {
+  min-width: 0;
+  padding: 12px 14px;
+  border-right: 1px solid var(--cor-borda);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dashboard-indicador:last-child { border-right: none; }
+.dashboard-indicador span { color: var(--cor-texto-suave); font-size: 11px; }
+.dashboard-indicador strong { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+
+.dashboard-conteudo { display: grid; gap: 14px; }
+.dashboard-grafico-card { padding: 17px 18px 12px; }
+
+.dashboard-secao-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.dashboard-secao-cabecalho h2 { font-size: 15px; font-weight: 620; }
+.dashboard-secao-cabecalho p { margin-top: 3px; color: var(--cor-texto-suave); font-size: 11px; }
+
+.dashboard-legenda-fluxo { display: flex; gap: 12px; color: var(--cor-texto-suave); font-size: 11px; }
+.dashboard-legenda-fluxo span { display: inline-flex; align-items: center; gap: 5px; }
+.legenda-ponto { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.legenda-ponto--receita { background: var(--cor-receita); }
+.legenda-ponto--despesa { background: var(--cor-despesa); }
+
+.dashboard-listas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.dashboard-lista-card { padding: 16px 18px; }
+
+.item-lancamento--compacto { padding: 9px 0; }
+.item-lancamento--compacto .item-lancamento__descricao { font-size: 13px; }
+.item-lancamento--compacto .item-lancamento__valor { font-size: 13px; }
+.item-lancamento__corpo { min-width: 0; padding-right: 12px; }
+
+/* --------------------------------------------------------------------------\n   Cartões: cartões menores e faturas recolhíveis\n   -------------------------------------------------------------------------- */
+.secao-titulo {
+  font-size: 16px;
+  margin: 28px 0 12px;
+  gap: 8px;
+}
+.secao-titulo__aviso { font-size: 11px; }
+
+.grade-cartoes {
+  grid-template-columns: repeat(auto-fill, minmax(245px, 290px));
+  gap: 12px;
+  align-items: start;
+}
+
+.cartao-item {
+  border-radius: 11px;
+  box-shadow: none;
+}
+.cartao-item:hover { transform: none; box-shadow: 0 4px 14px rgba(18, 24, 31, 0.06); }
+
+.cartao-visual {
+  min-height: 118px;
+  padding: 15px 16px;
+  gap: 7px;
+}
+.cartao-visual__topo { font-size: 10px; }
+.cartao-visual__nome { font-size: 17px; }
+.cartao-visual__rodape { gap: 8px; }
+.cartao-visual__rotulo { font-size: 10px; }
+.cartao-visual__valor { font-size: 18px; }
+.cartao-visual__datas { font-size: 10px; }
+
+.cartao-detalhes { padding: 9px 14px 11px; }
+.cartao-barra { height: 4px; margin-bottom: 8px; }
+.cartao-limites { font-size: 10px; margin-bottom: 8px; }
+.cartao-limites strong { font-size: 12px; }
+.cartao-acoes { padding-top: 8px; }
+
+.cartao-adicionar {
+  min-height: 164px;
+  max-width: 290px;
+  border-radius: 11px;
+  font-size: 12px;
+}
+.cartao-adicionar span:first-child { font-size: 22px; }
+
+.seletor-mes {
+  padding: 5px 8px;
+  border-radius: 9px;
+  margin-bottom: 12px;
+}
+.seletor-mes__mes { min-width: 150px; font-size: 13px; }
+.seletor-mes button { font-size: 13px; padding: 5px 9px; }
+
+.fatura {
+  border-radius: 10px;
+  padding: 0;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.fatura__cabecalho {
+  padding: 13px 15px;
+  margin: 0;
+  border-bottom: none;
+  gap: 12px;
+}
+
+.fatura__identificacao { gap: 10px; min-width: 220px; }
+.fatura__cor { width: 9px; height: 9px; border-radius: 3px; }
+.fatura__nome { font-size: 14px; font-weight: 600; }
+.fatura__vencimento { font-size: 11px; }
+.fatura__progresso { margin-top: 2px; color: var(--cor-texto-suave); font-size: 10px; }
+.fatura__total { font-size: 18px; font-weight: 650; }
+.fatura__resumo-acoes { gap: 6px; }
+.fatura__status-paga {
+  color: var(--cor-receita);
+  font-size: 11px;
+  font-weight: 650;
+  padding: 4px 7px;
+  background: color-mix(in srgb, var(--cor-receita) 11%, transparent);
+  border-radius: 999px;
+}
+.fatura--quitada .fatura__total { color: var(--cor-texto-suave); }
+
+.fatura__barra-detalhes {
+  border-top: 1px solid var(--cor-borda);
+  padding: 5px 15px;
+  background: color-mix(in srgb, var(--cor-superficie-alt) 45%, transparent);
+}
+
+.fatura__detalhes {
+  border-top: 1px solid var(--cor-borda);
+  padding: 10px 15px 12px;
+}
+.fatura__detalhes[hidden] { display: none !important; }
+
+.linha-parcela {
+  padding: 9px 0;
+  gap: 10px;
+}
+.linha-parcela__descricao { font-size: 12.5px; }
+.linha-parcela__categoria { font-size: 10.5px; }
+.linha-parcela__valor { font-size: 12.5px; }
+.chip-parcela { font-family: var(--fonte-texto); font-size: 10px; }
+
+.fatura__mostrar-mais {
+  display: block;
+  margin: 7px auto 0;
+}
+
+.fatura-manual {
+  margin: 0 0 8px;
+  padding: 9px 11px;
+  border-radius: 8px;
+}
+.fatura-manual strong { font-size: 12px; }
+.fatura-manual span { font-size: 10.5px; }
+
+.fatura-pagamentos {
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  padding: 9px 11px;
+}
+.fatura-detalhes__titulo { display: block; color: var(--cor-texto-suave); font-size: 10px; margin-bottom: 5px; }
+.fatura-pagamento-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--cor-borda);
+}
+.fatura-pagamento-item:first-of-type { border-top: 0; }
+.fatura-pagamento-item > div { display: flex; flex-direction: column; gap: 1px; }
+.fatura-pagamento-item strong { font-size: 12px; }
+.fatura-pagamento-item span { color: var(--cor-texto-suave); font-size: 10px; }
+
+/* Acertos também ficam menores: informação primeiro, botões depois. */
+.grade-acertos-pessoas { gap: 12px; margin-bottom: 18px; }
+.acerto-pessoa { padding: 15px 16px; border-radius: 10px; }
+.acerto-pessoa__topo { margin-bottom: 10px; }
+.acerto-pessoa__topo h3 { font-size: 16px; }
+.acerto-pessoa__origens { padding-bottom: 9px; margin-bottom: 9px; }
+.acerto-pessoa__resumo { gap: 9px; }
+.acerto-pessoa__resumo strong { font-size: 14px; }
+.acerto-pessoa__acoes { margin-top: 12px; gap: 7px; flex-wrap: wrap; }
+.acerto-pessoa__acoes .botao-primario,
+.acerto-pessoa__acoes .botao-secundario { width: auto; padding: 7px 10px; font-size: 11px; }
+
+/* --------------------------------------------------------------------------\n   Configurações / escolha de tema\n   -------------------------------------------------------------------------- */
+.configuracoes-grade {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(260px, .7fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.configuracao-card__cabecalho h2 { font-size: 16px; }
+.configuracao-card__cabecalho p { margin-top: 4px; color: var(--cor-texto-suave); font-size: 12px; }
+
+.tema-opcoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.tema-opcao {
+  text-align: left;
+  padding: 10px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 9px;
+  background: var(--cor-superficie);
+  color: var(--cor-texto);
+  transition: border-color var(--transicao-rapida), background var(--transicao-rapida);
+}
+.tema-opcao:hover { border-color: color-mix(in srgb, var(--cor-primaria) 45%, var(--cor-borda)); }
+.tema-opcao--ativa {
+  border-color: var(--cor-primaria);
+  background: color-mix(in srgb, var(--cor-primaria-suave) 55%, var(--cor-superficie));
+}
+.tema-opcao > span:last-child { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.tema-opcao strong { font-size: 12.5px; }
+.tema-opcao small { color: var(--cor-texto-suave); font-size: 10.5px; line-height: 1.35; }
+
+.tema-opcao__preview {
+  height: 58px;
+  border-radius: 7px;
+  padding: 9px;
+  display: grid;
+  grid-template-columns: 1.2fr .8fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 5px;
+  border: 1px solid rgba(127,127,127,.22);
+  overflow: hidden;
+}
+.tema-opcao__preview i { display: block; border-radius: 3px; }
+.tema-opcao__preview i:first-child { grid-row: 1 / -1; }
+.tema-opcao__preview--claro { background: #f3f5f4; }
+.tema-opcao__preview--claro i { background: #fff; border: 1px solid #dce2df; }
+.tema-opcao__preview--escuro { background: #0f1419; }
+.tema-opcao__preview--escuro i { background: #1c232b; border: 1px solid #2b343e; }
+.tema-opcao__preview--sistema { background: linear-gradient(90deg, #f3f5f4 0 50%, #0f1419 50%); }
+.tema-opcao__preview--sistema i { background: color-mix(in srgb, var(--cor-superficie) 75%, transparent); border: 1px solid rgba(127,127,127,.25); }
+
+.configuracao-conta-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 12px;
+}
+.configuracao-conta-linha span { color: var(--cor-texto-suave); }
+.configuracao-conta-linha strong { overflow-wrap: anywhere; text-align: right; }
+
+@media (max-width: 960px) {
+  .dashboard-principal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .configuracoes-grade { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .pagina-app { padding-top: 18px; }
+  .topo-app { align-items: flex-start; gap: 10px; }
+  .topo-app__usuario { flex-direction: column; align-items: flex-end; gap: 3px; }
+  .topo-app__usuario span { display: none; }
+  .nav-paginas { gap: 18px; margin-bottom: 18px; }
+  .dashboard-indicadores { grid-template-columns: 1fr 1fr; }
+  .dashboard-indicador:nth-child(2) { border-right: none; }
+  .dashboard-indicador:nth-child(-n+2) { border-bottom: 1px solid var(--cor-borda); }
+  .dashboard-listas { grid-template-columns: 1fr; }
+  .dashboard-legenda-fluxo { display: none; }
+  .tema-opcoes { grid-template-columns: 1fr; }
+  .tema-opcao { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+  .tema-opcao > span:last-child { margin-top: 0; }
+  .fatura__resumo-acoes { width: 100%; justify-content: flex-start; }
+  .fatura__total { margin-right: auto; }
+}
+
+@media (max-width: 520px) {
+  .container { padding-inline: 16px; }
+  .dashboard-principal { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dashboard-card { min-height: 112px; padding: 13px; }
+  .dashboard-card__valor { font-size: 20px; }
+  .dashboard-card__apoio { font-size: 10px; }
+  .dashboard-indicadores { grid-template-columns: 1fr; }
+  .dashboard-indicador { border-right: none; border-bottom: 1px solid var(--cor-borda); }
+  .dashboard-indicador:last-child { border-bottom: none; }
+  .grade-cartoes { grid-template-columns: 1fr; }
+  .cartao-adicionar { max-width: none; }
+  .secao-titulo { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .fatura__cabecalho { align-items: flex-start; }
+  .fatura__identificacao { min-width: 0; width: 100%; }
+  .fatura__resumo-acoes { align-items: center; }
+  .fatura__resumo-acoes .botao-secundario { flex: 1 1 auto; text-align: center; }
+  .tema-opcao { grid-template-columns: 92px 1fr; }
 }

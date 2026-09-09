@@ -1,182 +1,126 @@
 # Controle Financeiro
 
-Sistema pessoal de controle financeiro, feito para substituir sua planilha
-de Excel. Construído com **HTML, CSS e JavaScript puro**, usando
-**Firebase** (login e banco de dados) e publicado na **Netlify**.
+Sistema pessoal de controle financeiro feito com **HTML, CSS e JavaScript puro**, usando **Firebase Authentication + Realtime Database** e publicação pela **Netlify** a partir do GitHub.
 
-Este é o resultado da **Etapa 1 — Estrutura do projeto**. Ainda não há
-funcionalidade real (login, dados, gráficos); o objetivo desta etapa é
-apenas montar o "esqueleto" organizado do sistema, para que as próximas
-etapas encaixem nele sem bagunça.
+## Estado atual
 
-## Como o projeto está organizado
+Concluídas até aqui:
 
-```
+1. Estrutura do projeto
+2. Firebase Realtime Database
+3. Login com Google e e-mail/senha
+4. Dashboard
+5. Receitas
+6. Despesas
+7. Cartões, faturas, parcelamento e assinaturas
+8. Calendário financeiro
+
+Além da Etapa 8, esta versão contém uma revisão de usabilidade do Dashboard, Cartões, pagamentos e tema.
+
+## Estrutura
+
+```text
 controle-financeiro/
-├── index.html              → porta de entrada (vira a tela de Login na Etapa 3)
-├── README.md                → este arquivo
-│
+├── index.html
+├── database.rules.json
 ├── css/
-│   └── style.css            → cores, fontes, tema claro/escuro (já pronto)
-│
+│   └── style.css
 ├── js/
-│   ├── config.js             → dados de configuração (moeda, categorias padrão)
-│   ├── firebase.js           → conexão com o Firebase (Etapa 2)
-│   ├── app.js                → arranca o sistema (por ora, só o tema claro/escuro)
-│   └── utils.js               → funções auxiliares (formatar dinheiro, datas, parcelas)
-│
+│   ├── app.js
+│   ├── calculos.js
+│   ├── config.js
+│   ├── firebase.js
+│   ├── theme-init.js
+│   └── utils.js
 ├── components/
-│   ├── modal.js               → janelas de cadastro/confirmação (Etapa 5)
-│   ├── cards.js                → cartões do dashboard (Etapa 4)
-│   └── charts.js               → gráficos (Etapas 4 e 10)
-│
+│   ├── calendario.js
+│   ├── cards.js
+│   ├── cartoes.js
+│   ├── charts.js
+│   └── modal.js
 └── pages/
-    ├── dashboard.html          → visão geral (Etapa 4)
-    ├── receitas.html            → cadastro de receitas (Etapa 5)
-    ├── despesas.html             → cadastro de despesas (Etapa 6)
-    ├── cartoes.html               → cartões de crédito e parcelas (Etapa 7)
-    ├── metas.html                  → metas financeiras (Etapa 9)
-    ├── relatorios.html              → relatórios e exportações (Etapa 10)
-    └── configuracoes.html            → perfil, tema, moeda, idioma (Etapa 11)
+    ├── dashboard.html
+    ├── receitas.html
+    ├── despesas.html
+    ├── cartoes.html
+    ├── calendario.html
+    ├── metas.html
+    ├── relatorios.html
+    └── configuracoes.html
 ```
 
-## Por que essa organização?
+## Banco de dados
 
-- **`css/`** guarda toda a aparência do sistema num só lugar. Mudar uma cor
-  aqui muda em todas as telas ao mesmo tempo.
-- **`js/`** guarda a "lógica" que não é visual: conexão com o banco de
-  dados, cálculos, formatação de valores.
-- **`components/`** guarda pedaços de interface reutilizados em várias
-  páginas (por exemplo, o mesmo modal de "confirmar exclusão" serve para
-  receitas, despesas e cartões).
-- **`pages/`** guarda cada tela do sistema, uma por arquivo.
+Todos os dados ficam em:
 
-Isso evita repetição de código e facilita a manutenção — se um dia você
-quiser mudar como uma parcela é calculada, por exemplo, só precisa mexer
-em um lugar (`js/utils.js`), e todas as telas que usam esse cálculo são
-atualizadas automaticamente.
+```text
+usuarios/{uid}/...
+```
 
-## O que já está pronto nesta etapa
+As regras de `database.rules.json` permitem que cada usuário autenticado leia e altere somente a própria árvore.
 
-- Estrutura de pastas completa.
-- Sistema de design em `css/style.css`: paleta de cores, tipografia e
-  suporte a tema claro/escuro (a troca de tema em si já funciona — veja
-  `js/app.js`).
-- Esqueleto de todas as páginas, com título e um aviso de "em construção",
-  para você já visualizar a navegação geral do sistema.
-- Funções utilitárias prontas em `js/utils.js`: formatação de moeda no
-  padrão brasileiro, formatação de data e cálculo automático de parcelas
-  (essencial para a tela de Cartões, mais adiante).
+Coleções/áreas utilizadas atualmente:
 
-## O que NÃO está pronto ainda (de propósito)
+- `receitas`
+- `despesas`
+- `cartoes`
+- `compras`
+- `parcelas`
+- `faturasManuais`
+- `acertosPessoas`
+- `pagamentosFaturas`
+- `configuracoes/preferencias`
 
-- Login (Etapa 3)
-- Conexão com o Firebase — os arquivos `firebase.js` e `config.js` têm
-  campos vazios, esperando as chaves do seu projeto Firebase (Etapa 2)
-- Qualquer cadastro de receita, despesa, cartão, meta, etc.
-- Gráficos e relatórios
+## Regra financeira do Dashboard
 
-## Próxima etapa: Firebase
+O Dashboard usa `js/calculos.js` como fonte única de cálculo para evitar duplicidade.
 
-Na Etapa 2, vamos:
+- **Recebido este mês:** receitas do mês com status `recebido`.
+- **Pago este mês:** despesas comuns pagas + faturas próprias pagas + pagamentos/acertos com terceiros.
+- **Saldo atual:** recebido no mês − pago no mês.
+- **Despesas:** lançamentos da tela Despesas no mês.
+- **Faturas:** total oficial das faturas do mês. Se houver um total manual, ele substitui a soma das compras detalhadas daquele cartão/mês.
+- **Total do mês:** despesas + faturas.
+- **Acertos com pessoas não são uma nova despesa:** eles registram o pagamento das obrigações já contabilizadas, evitando somar o mesmo valor duas vezes.
 
-1. Criar juntos um projeto gratuito no [Firebase Console](https://console.firebase.google.com/),
-   passo a passo, com prints explicados.
-2. Ativar o **Realtime Database** (banco de dados) e o **Authentication**
-   (login com Google e com e-mail/senha).
-3. Copiar as chaves de configuração do seu projeto para dentro de
-   `js/config.js`.
-4. Escrever as **regras de segurança do Realtime Database**, para garantir que
-   cada usuário só enxergue os próprios dados.
+Regularizar um pagamento de um mês antigo altera aquele mês, mas não muda o “Saldo atual” do mês corrente.
 
-Você não precisa saber nada de programação para isso — vou te guiar
-clicando em cada botão.
+## Cartões de terceiros e acertos
 
----
+Cartões de outras pessoas são mostrados **mês a mês**, sem somar parcelas futuras ou assinaturas como se fossem uma dívida atual inteira.
 
-**Confirma que pode seguir para a Etapa 2 (Firebase)?** Se quiser ajustar
-alguma cor, fonte ou nome de pasta antes de continuar, também é só falar.
+É possível:
 
-## Etapa 7 — Cartões (concluída)
+- informar somente o total da fatura;
+- lançar compras detalhadas quando for útil;
+- registrar pagamento parcial;
+- marcar a fatura inteira como paga;
+- vincular despesas comuns a uma pessoa (ex.: `Energia → Mãe`);
+- visualizar o acerto mensal consolidado da pessoa;
+- registrar pagamentos parciais ou marcar todo o acerto do mês como pago.
 
-Arquivos novos ou alterados nesta etapa:
+O sistema preserva pagamentos antigos que já estavam marcados antes da criação do histórico de pagamentos, sem contá-los duas vezes.
 
-- `components/cartoes.js` — **novo**. Contém a regra da fatura (em qual mês
-  cada compra cai) e a geração automática das parcelas.
-- `pages/cartoes.html` — a tela de cartões, faturas e compras.
-- `css/style.css` — estilos do cartão colorido, das faturas e da paleta de cores.
-- `js/utils.js` — funções novas de mês (`somarMeses`, `formatarMesAno`,
-  `ultimoDiaDoMes`, `dataIsoSegura`, `hojeIso`).
-- `components/modal.js` — nova função `confirmarAcao` (confirmação que não é exclusão).
-- `pages/dashboard.html` — passou a mostrar as faturas do mês e o limite disponível.
+## Faturas compactas
 
-### Como o parcelamento funciona
+As faturas ficam recolhidas por padrão. O cabeçalho mostra o essencial; os lançamentos aparecem ao clicar em **Ver detalhes**. Para faturas muito grandes, são mostrados poucos registros por vez com **Mostrar mais**, evitando uma página interminável.
 
-O cartão fecha a fatura no dia anterior ao "melhor dia de compra". Compras
-feitas até o fechamento entram na fatura que está para fechar; compras feitas
-a partir do melhor dia entram na fatura seguinte. Cada parcela recebe o mês
-da fatura e a data de vencimento já calculados, e é gravada separadamente em
-`usuarios/{uid}/parcelas`.
+## Assinaturas
 
-### Cartões de outras pessoas
+Compras recorrentes mantêm um horizonte de cobranças futuras e usam um identificador único por assinatura/mês para evitar duplicidades. Também é possível remover somente uma cobrança mensal sem apagar toda a assinatura.
 
-Cada cartão tem um tipo: **meu cartão** ou **de outra pessoa**. No segundo
-caso, o único campo obrigatório é o nome — nada de banco, bandeira ou limite,
-porque controlar limite de um cartão que não é seu não faz sentido. Para não
-transformar parcelas futuras e assinaturas em uma dívida total assustadora,
-os cartões de terceiros mostram o valor **mês a mês**, conforme o mês
-selecionado na tela.
+## Tema e aparência
 
-Também existe o bloco **Acertos com pessoas**. Ele soma, para cada pessoa, as
-faturas dos cartões dela e as despesas que foram vinculadas à mesma pessoa
-(ex.: uma ajuda de custo de energia para a mãe). É possível registrar
-pagamentos parciais, e o sistema mostra **Total do mês / Já pago / Falta**.
-Os pagamentos ficam registrados e podem ser apagados se houver erro.
+A interface usa a tipografia **Geist**, com números tabulares para valores financeiros.
 
-Quando o cartão não tem "melhor dia de compra" informado, o sistema usa a
-regra simples: a compra entra na fatura do próprio mês em que foi feita, e as
-parcelas seguintes caem nos meses seguintes — igual a uma planilha com uma
-aba por mês.
+Em **Configurações → Aparência**, o usuário escolhe:
 
-### Total manual da fatura
+- Claro
+- Escuro
+- Seguir sistema
 
-Não é obrigatório cadastrar compra por compra. Em cada fatura existe o botão
-**Informar total**, pensado para situações em que o usuário já acompanha as
-compras no aplicativo do cartão (corridas de 99, pequenas compras etc.). O
-valor informado manualmente vira o total oficial daquele cartão naquele mês;
-compras detalhadas que já existirem continuam visíveis, mas não são somadas
-novamente. Os dados ficam em `usuarios/{uid}/faturasManuais`.
+A preferência é salva localmente e em `configuracoes/preferencias`. O arquivo `js/theme-init.js` aplica o tema antes do CSS ser desenhado para evitar a piscada branca ao trocar de página.
 
-Os pagamentos feitos a uma pessoa ficam em `usuarios/{uid}/acertosPessoas`.
-Nas despesas, o campo opcional `pessoaRelacionada` permite incluir despesas
-comuns no mesmo acerto mensal.
+## Publicação
 
-### Assinaturas (compras recorrentes)
-
-Ao lançar uma compra no cartão, agora existem duas abas: **Compra parcelada**
-(o que já existia) e **Assinatura mensal** — para Netflix, academia, qualquer
-cobrança que se repete todo mês sem uma quantidade fixa de parcelas.
-
-Como uma assinatura nunca "acaba" sozinha, o sistema não gera as cobranças
-todas de uma vez (seria infinito). Em vez disso, ele mantém sempre um
-colchão de 12 meses gerados à frente e completa esse colchão sozinho toda
-vez que a tela de Cartões é aberta — então a assinatura nunca fica “para
-trás” mesmo que o app passe meses fechado.
-
-**Cancelar** uma assinatura (botão 🚫 na lista de compras) marca o mês atual
-como o último cobrado e apaga só as cobranças futuras que ainda não foram
-pagas — o histórico de cobranças já lançadas continua intacto. Excluir, por
-outro lado, apaga a assinatura inteira e todo o histórico dela.
-
-
-## Etapa 8 — Calendário financeiro
-
-A página `pages/calendario.html` reúne receitas, despesas, compras e parcelas em uma visão mensal simples.
-
-- Receitas e despesas aparecem no dia cadastrado.
-- Compras aparecem no dia em que foram realizadas.
-- Parcelas aparecem no dia do vencimento quando o cartão possui essa informação.
-- Faturas sem dia de vencimento continuam visíveis no mês em um bloco separado; o sistema não inventa uma data.
-- No celular, o calendário mostra apenas indicadores de cor e os detalhes aparecem ao tocar no dia.
-
-O componente `components/calendario.js` concentra as funções de data e apresentação específicas dessa tela.
+O projeto não tem etapa de build. No GitHub, `index.html`, `css/`, `js/`, `components/` e `pages/` devem permanecer na raiz do repositório. Na Netlify, o diretório de publicação é a raiz (`.` ou vazio, conforme a interface).

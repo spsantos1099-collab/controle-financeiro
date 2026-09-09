@@ -4,24 +4,122 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configurações · Controle Financeiro</title>
+  <script src="../js/theme-init.js"></script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-protegida="true" data-raiz="../">
-  <!--
-    Esta pagina sera construida na ETAPA 11.
-    Por enquanto e apenas um placeholder para manter a estrutura
-    de navegacao do projeto completa desde o inicio.
-  -->
-  <main class="container" style="padding-top: var(--esp-7);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--esp-5); padding-bottom: var(--esp-3); border-bottom: 1px solid var(--cor-borda);">
-      <span style="color: var(--cor-texto-suave); font-size: 13px;">Logado como <strong data-usuario-email style="color: var(--cor-texto);"></strong></span>
-      <button data-sair style="color: var(--cor-despesa); font-weight: 600; font-size: 13px;">Sair</button>
+  <main class="container pagina-app">
+    <div class="topo-app">
+      <div>
+        <h1 class="topo-app__titulo">Configurações</h1>
+        <p class="topo-app__subtitulo">Ajuste a aparência do sistema ao seu jeito.</p>
+      </div>
+      <div class="topo-app__usuario">
+        <span><strong data-usuario-email></strong></span>
+        <button data-sair class="botao-sair" type="button">Sair</button>
+      </div>
     </div>
-    <h1>Configurações</h1>
-    <p style="color: var(--cor-texto-suave); margin-top: var(--esp-2);">
-      Esta tela ainda sera desenvolvida (Etapa 11).
-    </p>
+
+    <nav class="nav-paginas" aria-label="Navegação principal">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="receitas.html">Receitas</a>
+      <a href="despesas.html">Despesas</a>
+      <a href="cartoes.html">Cartões</a>
+      <a href="calendario.html">Calendário</a>
+      <a href="metas.html">Metas</a>
+      <a href="relatorios.html">Relatórios</a>
+      <a href="configuracoes.html" class="ativa">Configurações</a>
+    </nav>
+
+    <div class="configuracoes-grade">
+      <section class="card configuracao-card">
+        <div class="configuracao-card__cabecalho">
+          <div>
+            <h2>Aparência</h2>
+            <p>Escolha o tema. A preferência fica salva neste dispositivo e no seu perfil.</p>
+          </div>
+        </div>
+
+        <div class="tema-opcoes" role="radiogroup" aria-label="Tema do sistema">
+          <button class="tema-opcao" type="button" data-tema-opcao="claro" role="radio" aria-checked="false">
+            <span class="tema-opcao__preview tema-opcao__preview--claro" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </span>
+            <span><strong>Claro</strong><small>Sempre usar o modo claro</small></span>
+          </button>
+
+          <button class="tema-opcao" type="button" data-tema-opcao="escuro" role="radio" aria-checked="false">
+            <span class="tema-opcao__preview tema-opcao__preview--escuro" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </span>
+            <span><strong>Escuro</strong><small>Sempre usar o modo escuro</small></span>
+          </button>
+
+          <button class="tema-opcao" type="button" data-tema-opcao="sistema" role="radio" aria-checked="false">
+            <span class="tema-opcao__preview tema-opcao__preview--sistema" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </span>
+            <span><strong>Seguir sistema</strong><small>Acompanha o tema do computador ou celular</small></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="card configuracao-card configuracao-card--conta">
+        <div class="configuracao-card__cabecalho">
+          <div>
+            <h2>Conta</h2>
+            <p>Outras preferências de perfil serão adicionadas na etapa de Configurações.</p>
+          </div>
+        </div>
+        <div class="configuracao-conta-linha">
+          <span>E-mail</span>
+          <strong data-usuario-email></strong>
+        </div>
+      </section>
+    </div>
   </main>
+
+  <script type="module">
+    import { observarUsuario, atualizarRegistro } from "../js/firebase.js";
+    import { mostrarToast } from "../js/app.js";
+
+    let uidAtual = null;
+    const opcoes = [...document.querySelectorAll("[data-tema-opcao]")];
+
+    function marcarOpcao(preferencia) {
+      opcoes.forEach((botao) => {
+        const ativa = botao.dataset.temaOpcao === preferencia;
+        botao.classList.toggle("tema-opcao--ativa", ativa);
+        botao.setAttribute("aria-checked", String(ativa));
+      });
+    }
+
+    const preferenciaInicial = window.ControleTema?.obterPreferencia?.() || "sistema";
+    marcarOpcao(preferenciaInicial);
+
+    opcoes.forEach((botao) => {
+      botao.addEventListener("click", async () => {
+        const preferencia = botao.dataset.temaOpcao;
+        window.ControleTema?.aplicarPreferencia?.(preferencia, true);
+        marcarOpcao(preferencia);
+
+        if (!uidAtual) return;
+        try {
+          await atualizarRegistro(uidAtual, "configuracoes", "preferencias", {
+            tema: preferencia,
+            updatedAt: Date.now()
+          });
+          mostrarToast("Tema atualizado.", "sucesso");
+        } catch (erro) {
+          mostrarToast("O tema foi aplicado neste dispositivo, mas não foi possível salvar no perfil.", "erro");
+        }
+      });
+    });
+
+    observarUsuario((usuario) => {
+      if (usuario) uidAtual = usuario.uid;
+    });
+  </script>
   <script type="module" src="../js/app.js"></script>
 </body>
 </html>

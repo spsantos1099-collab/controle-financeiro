@@ -1,37 +1,25 @@
 /* ==========================================================================
    APP.JS
-   Ponto de entrada geral da aplicação: controle de tema (claro/escuro),
-   proteção de páginas (exige login) e inicialização de listeners globais.
+   Comportamentos globais: proteção das páginas, sincronização da preferência
+   de tema e toasts. O tema inicial é aplicado por theme-init.js antes do CSS.
    ========================================================================== */
 
-import { observarUsuario, sair } from "./firebase.js";
+import { observarUsuario, sair, buscarUmaVez } from "./firebase.js";
 
-const CHAVE_TEMA = "controleFinanceiro:tema";
+async function sincronizarTemaDoPerfil(usuario) {
+  if (!usuario || !window.ControleTema) return;
 
-function aplicarTema(tema) {
-  document.documentElement.setAttribute("data-tema", tema);
-  localStorage.setItem(CHAVE_TEMA, tema);
+  try {
+    const preferencias = await buscarUmaVez(usuario.uid, "configuracoes/preferencias");
+    const tema = preferencias?.tema;
+    if (["sistema", "claro", "escuro"].includes(tema)) {
+      window.ControleTema.aplicarPreferencia(tema, true);
+    }
+  } catch (_) {
+    // A preferência local continua funcionando mesmo se a rede estiver fora.
+  }
 }
 
-function alternarTema() {
-  const temaAtual = document.documentElement.getAttribute("data-tema") || "claro";
-  aplicarTema(temaAtual === "claro" ? "escuro" : "claro");
-}
-
-function iniciarTema() {
-  const temaSalvo = localStorage.getItem(CHAVE_TEMA);
-  const preferSistemaEscuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  aplicarTema(temaSalvo || (preferSistemaEscuro ? "escuro" : "claro"));
-}
-
-/* --------------------------------------------------------------------
-   PROTEÇÃO DE PÁGINAS
-   Toda página interna (dashboard, receitas, despesas...) tem no <body>:
-     <body data-protegida="true" data-raiz="../">
-   Se ninguém estiver logado, o usuário é mandado de volta para o login.
-   Se estiver logado, o e-mail dele é exibido em qualquer elemento com
-   o atributo [data-usuario-email], e o botão [data-sair] faz logout.
-   -------------------------------------------------------------------- */
 function protegerPaginaSeNecessario() {
   const paginaProtegida = document.body.dataset.protegida === "true";
   if (!paginaProtegida) return;
@@ -45,8 +33,10 @@ function protegerPaginaSeNecessario() {
     }
 
     document.querySelectorAll("[data-usuario-email]").forEach((elemento) => {
-      elemento.textContent = usuario.email;
+      elemento.textContent = usuario.email || "";
     });
+
+    sincronizarTemaDoPerfil(usuario);
   });
 
   const botaoSair = document.querySelector("[data-sair]");
@@ -58,19 +48,19 @@ function protegerPaginaSeNecessario() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  iniciarTema();
+function iniciarAplicacao() {
   protegerPaginaSeNecessario();
+  document.documentElement.classList.add("app-iniciada");
+}
 
-  const botaoTema = document.querySelector("[data-alterna-tema]");
-  if (botaoTema) {
-    botaoTema.addEventListener("click", alternarTema);
-  }
-});
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", iniciarAplicacao, { once: true });
+} else {
+  iniciarAplicacao();
+}
 
 /* --------------------------------------------------------------------
-   TOASTS (avisos de sucesso/erro no canto da tela)
-   Uso: mostrarToast("Receita salva com sucesso!", "sucesso")
+   TOASTS
    -------------------------------------------------------------------- */
 export function mostrarToast(mensagem, tipo = "sucesso") {
   let container = document.getElementById("containerToasts");
@@ -90,6 +80,6 @@ export function mostrarToast(mensagem, tipo = "sucesso") {
 
   setTimeout(() => {
     toast.classList.remove("toast--visivel");
-    setTimeout(() => toast.remove(), 250);
+    setTimeout(() => toast.remove(), 220);
   }, 3200);
 }
