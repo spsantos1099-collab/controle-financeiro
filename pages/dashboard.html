@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-tema="claro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard · Controle Financeiro</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body data-protegida="true" data-raiz="../">
+
+  <main class="container" style="padding-top: var(--esp-6); padding-bottom: var(--esp-7);">
+
+    <div class="topo-app">
+      <h1 class="topo-app__titulo">Dashboard</h1>
+      <div class="topo-app__usuario">
+        <span>Logado como <strong data-usuario-email style="color: var(--cor-texto);"></strong></span>
+        <button data-sair class="botao-sair" type="button">Sair</button>
+      </div>
+    </div>
+
+    <nav class="nav-paginas">
+      <a href="dashboard.html" class="ativa">Dashboard</a>
+      <a href="receitas.html">Receitas</a>
+      <a href="despesas.html">Despesas</a>
+      <a href="cartoes.html">Cartões</a>
+      <a href="metas.html">Metas</a>
+      <a href="relatorios.html">Relatórios</a>
+      <a href="configuracoes.html">Configurações</a>
+    </nav>
+
+    <!-- Cards de resumo -->
+    <div class="grade-cards" id="gradeCards"></div>
+
+    <!-- Gráficos -->
+    <div class="grade-graficos">
+      <div class="card">
+        <h2 class="card-grafico__titulo">Receitas x Despesas (últimos 6 meses)</h2>
+        <div id="graficoBarras"></div>
+      </div>
+      <div class="card">
+        <h2 class="card-grafico__titulo">Despesas por categoria (este mês)</h2>
+        <div id="graficoDonut"></div>
+      </div>
+    </div>
+
+    <!-- Próximos pagamentos e recebimentos -->
+    <div class="grade-listas">
+      <div class="card">
+        <h2 class="card-lista__titulo">Próximos pagamentos</h2>
+        <div id="listaPagamentos" class="lista-lancamentos"></div>
+      </div>
+      <div class="card">
+        <h2 class="card-lista__titulo">Próximos recebimentos</h2>
+        <div id="listaRecebimentos" class="lista-lancamentos"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { observarLista, observarUsuario } from "../js/firebase.js";
+    import {
+      formatarMoeda, formatarData, paraLista,
+      mesAtual, dataPertenceAoMes, somarValores
+    } from "../js/utils.js";
+    import { renderizarCards } from "../components/cards.js";
+    import { criarGraficoBarras, criarGraficoDonut } from "../components/charts.js";
+
+    let uidAtual = null;
+    let receitas = [];
+    let despesas = [];
+
+    const gradeCards = document.getElementById("gradeCards");
+    const graficoBarras = document.getElementById("graficoBarras");
+    const graficoDonut = document.getElementById("graficoDonut");
+    const listaPagamentos = document.getElementById("listaPagamentos");
+    const listaRecebimentos = document.getElementById("listaRecebimentos");
+
+    function hojeIso() {
+      return new Date().toISOString().slice(0, 10);
+    }
+
+    function recalcularTudo() {
+      const mes = mesAtual();
+      const hoje = hojeIso();
+
+      const receitasDoMes = receitas.filter((r) => dataPertenceAoMes(r.data, mes));
+      const despesasDoMes = despesas.filter((d) => dataPertenceAoMes(d.data, mes));
+
+      const receitasRecebidasTotal = somarValores(receitas.filter((r) => r.status === "recebido"));
+      const despesasPagasTotal = somarValores(despesas.filter((d) => d.status === "pago"));
+      const saldoAtual = receitasRecebidasTotal - despesasPagasTotal;
+
+      const saldoPrevisto = somarValores(receitasDoMes) - somarValores(despesasDoMes);
+      const saldoRealizado =
+        somarValores(receitasDoMes.filter((r) => r.status === "recebido")) -
+        somarValores(despesasDoMes.filter((d) => d.status === "pago"));
+
+      const despesasPendentes = despesas.filter((d) => d.status === "pendente" || d.status === "atrasado");
+      const contasVencidas = despesasPendentes.filter((d) => d.data < hoje);
+      const contasAVencer = despesasPendentes.filter((d) => d.data >= hoje);
+
+      renderizarCards(gradeCards, [
+        { titulo: "Saldo atual", valor: saldoAtual, tipo: saldoAtual >= 0 ? "receita" : "despesa" },
+        { titulo: "Receitas do mês", valor: somarValores(receitasDoMes), tipo: "receita" },
+        { titulo: "Despesas do mês", valor: somarValores(despesasDoMes), tipo: "despesa" },
+        { titulo: "Saldo previsto", valor: saldoPrevisto, tipo: saldoPrevisto >= 0 ? "receita" : "despesa", subtitulo: "considerando tudo que ainda vai entrar/sair" },
+        { titulo: "Saldo realizado", valor: saldoRealizado, tipo: saldoRealizado >= 0 ? "receita" : "despesa", subtitulo: "só o que já foi recebido/pago" },
+        { titulo: "Contas a vencer", valor: contasAVencer.length, tipo: "alerta", formato: "numero", subtitulo: contasAVencer.length === 1 ? "conta pendente" : "contas pendentes" },
+        { titulo: "Contas vencidas", valor: contasVencidas.length, tipo: contasVencidas.length ? "despesa" : "neutro", formato: "numero", subtitulo: contasVencidas.length === 1 ? "conta atrasada" : "contas atrasadas" }
+      ]);
+
+      // Gráfico de barras: últimos 6 meses
+      const nomesMeses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const ultimosMeses = Array.from({ length: 6 }, (_, indice) => {
+        const data = new Date();
+        data.setDate(1);
+        data.setMonth(data.getMonth() - (5 - indice));
+        const chave = `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
+        return {
+          label: nomesMeses[data.getMonth()],
+          receita: somarValores(receitas.filter((r) => dataPertenceAoMes(r.data, chave))),
+          despesa: somarValores(despesas.filter((d) => dataPertenceAoMes(d.data, chave)))
+        };
+      });
+      criarGraficoBarras(graficoBarras, ultimosMeses);
+
+      // Gráfico de rosca: despesas do mês por categoria
+      const porCategoria = {};
+      despesasDoMes.forEach((d) => {
+        const categoria = d.categoria || "Outros";
+        porCategoria[categoria] = (porCategoria[categoria] || 0) + (Number(d.valor) || 0);
+      });
+      const dadosCategoria = Object.entries(porCategoria)
+        .map(([label, valor]) => ({ label, valor }))
+        .sort((a, b) => b.valor - a.valor);
+      criarGraficoDonut(graficoDonut, dadosCategoria);
+
+      // Listas de próximos lançamentos (pendentes, ordenados por data)
+      renderizarLista(listaPagamentos, despesas
+        .filter((d) => d.status === "pendente" || d.status === "atrasado")
+        .sort((a, b) => a.data.localeCompare(b.data))
+        .slice(0, 6), "despesa");
+
+      renderizarLista(listaRecebimentos, receitas
+        .filter((r) => r.status === "pendente")
+        .sort((a, b) => a.data.localeCompare(b.data))
+        .slice(0, 6), "receita");
+    }
+
+    function renderizarLista(container, itens, tipo) {
+      if (!itens.length) {
+        container.innerHTML = '<p class="estado-vazio">Nada por aqui ainda.</p>';
+        return;
+      }
+
+      container.innerHTML = itens.map((item) => `
+        <div class="item-lancamento">
+          <div>
+            <div class="item-lancamento__descricao">${item.descricao || "Sem descrição"}</div>
+            <div class="item-lancamento__data">${formatarData(item.data)}</div>
+          </div>
+          <div class="item-lancamento__valor numero" style="color: var(--cor-${tipo})">
+            ${formatarMoeda(item.valor)}
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Assim que soubermos quem é o usuário, começamos a escutar os
+    // dados dele em tempo real (qualquer alteração no banco atualiza
+    // a tela sozinha, sem precisar recarregar a página).
+    observarUsuario((usuario) => {
+      if (!usuario || uidAtual === usuario.uid) return;
+      uidAtual = usuario.uid;
+
+      observarLista(uidAtual, "receitas", (dados) => {
+        receitas = paraLista(dados);
+        recalcularTudo();
+      });
+
+      observarLista(uidAtual, "despesas", (dados) => {
+        despesas = paraLista(dados);
+        recalcularTudo();
+      });
+    });
+
+    recalcularTudo(); // primeira renderização (tudo zerado) enquanto carrega
+  </script>
+
+  <script type="module" src="../js/app.js"></script>
+</body>
+</html>
