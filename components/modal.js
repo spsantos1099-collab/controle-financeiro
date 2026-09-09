@@ -70,3 +70,25 @@ export function confirmarExclusao(mensagem = "Tem certeza que deseja excluir est
     });
   });
 }
+
+/* --------------------------------------------------------------------
+   CONFIRMAÇÃO GENÉRICA (para ações que NÃO são exclusão, como
+   "marcar fatura como paga"). Retorna uma Promise<boolean>.
+   -------------------------------------------------------------------- */
+export function confirmarAcao(mensagem, { titulo = "Confirmar", rotuloConfirmar = "Confirmar" } = {}) {
+  return new Promise((resolve) => {
+    const overlay = abrirModal(`
+      <h3 class="modal-titulo">${titulo}</h3>
+      <p class="modal-texto">${mensagem}</p>
+      <div class="modal-acoes">
+        <button class="botao-secundario" data-fechar-modal type="button">Cancelar</button>
+        <button class="botao-primario" style="width:auto;" id="botaoConfirmarAcao" type="button">${rotuloConfirmar}</button>
+      </div>
+    `, { aoFechar: () => resolve(false) });
+
+    overlay.querySelector("#botaoConfirmarAcao").addEventListener("click", () => {
+      fecharModal();
+      resolve(true);
+    });
+  });
+}

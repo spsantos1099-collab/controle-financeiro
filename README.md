@@ -96,3 +96,37 @@ clicando em cada botão.
 
 **Confirma que pode seguir para a Etapa 2 (Firebase)?** Se quiser ajustar
 alguma cor, fonte ou nome de pasta antes de continuar, também é só falar.
+
+## Etapa 7 — Cartões (concluída)
+
+Arquivos novos ou alterados nesta etapa:
+
+- `components/cartoes.js` — **novo**. Contém a regra da fatura (em qual mês
+  cada compra cai) e a geração automática das parcelas.
+- `pages/cartoes.html` — a tela de cartões, faturas e compras.
+- `css/style.css` — estilos do cartão colorido, das faturas e da paleta de cores.
+- `js/utils.js` — funções novas de mês (`somarMeses`, `formatarMesAno`,
+  `ultimoDiaDoMes`, `dataIsoSegura`, `hojeIso`).
+- `components/modal.js` — nova função `confirmarAcao` (confirmação que não é exclusão).
+- `pages/dashboard.html` — passou a mostrar as faturas do mês e o limite disponível.
+
+### Como o parcelamento funciona
+
+O cartão fecha a fatura no dia anterior ao "melhor dia de compra". Compras
+feitas até o fechamento entram na fatura que está para fechar; compras feitas
+a partir do melhor dia entram na fatura seguinte. Cada parcela recebe o mês
+da fatura e a data de vencimento já calculados, e é gravada separadamente em
+`usuarios/{uid}/parcelas`.
+
+### Cartões de outras pessoas
+
+Cada cartão tem um tipo: **meu cartão** ou **de outra pessoa**. No segundo
+caso, o único campo obrigatório é o nome — nada de banco, bandeira ou limite,
+porque controlar limite de um cartão que não é seu não faz sentido. O valor em
+aberto passa a significar "quanto você ainda deve devolver", e o botão da
+fatura vira "Marcar como acertado".
+
+Quando o cartão não tem "melhor dia de compra" informado, o sistema usa a
+regra simples: a compra entra na fatura do próprio mês em que foi feita, e as
+parcelas seguintes caem nos meses seguintes — igual a uma planilha com uma
+aba por mês.

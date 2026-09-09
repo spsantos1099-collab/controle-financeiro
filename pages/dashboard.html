@@ -55,6 +55,12 @@
       </div>
     </div>
 
+    <!-- Faturas dos cartões (alimentado pela tela de Cartões) -->
+    <div class="card" style="margin-top: var(--esp-5);">
+      <h2 class="card-lista__titulo">Faturas dos cartões (este mês)</h2>
+      <div id="listaFaturasDashboard" class="lista-lancamentos"></div>
+    </div>
+
   </main>
 
   <script type="module">
@@ -69,7 +75,10 @@
     let uidAtual = null;
     let receitas = [];
     let despesas = [];
+    let cartoes = [];
+    let parcelas = [];
 
+    const listaFaturasDashboard = document.getElementById("listaFaturasDashboard");
     const gradeCards = document.getElementById("gradeCards");
     const graficoBarras = document.getElementById("graficoBarras");
     const graficoDonut = document.getElementById("graficoDonut");
@@ -100,6 +109,24 @@
       const contasVencidas = despesasPendentes.filter((d) => d.data < hoje);
       const contasAVencer = despesasPendentes.filter((d) => d.data >= hoje);
 
+      // Cartões: total das faturas deste mês e limite ainda disponível
+      const parcelasDoMes = parcelas.filter((p) => p.mesFatura === mes);
+      const totalFaturasDoMes = parcelasDoMes.reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
+      // Limite só considera cartões SEUS e que tenham limite informado
+      const cartoesComLimite = cartoes.filter((c) => c.tipo !== "terceiro" && Number(c.limite) > 0);
+      const idsComLimite = new Set(cartoesComLimite.map((c) => c.id));
+      const limiteTotal = cartoesComLimite.reduce((soma, c) => soma + Number(c.limite), 0);
+      const limiteComprometido = parcelas
+        .filter((p) => !p.pago && idsComLimite.has(p.cartaoId))
+        .reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
+      const limiteDisponivel = Math.max(0, limiteTotal - limiteComprometido);
+
+      // Quanto ainda falta acertar em cartões de outras pessoas
+      const idsTerceiros = new Set(cartoes.filter((c) => c.tipo === "terceiro").map((c) => c.id));
+      const devendoATerceiros = parcelas
+        .filter((p) => !p.pago && idsTerceiros.has(p.cartaoId))
+        .reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
+
       renderizarCards(gradeCards, [
         { titulo: "Saldo atual", valor: saldoAtual, tipo: saldoAtual >= 0 ? "receita" : "despesa" },
         { titulo: "Receitas do mês", valor: somarValores(receitasDoMes), tipo: "receita" },
@@ -107,7 +134,14 @@
         { titulo: "Saldo previsto", valor: saldoPrevisto, tipo: saldoPrevisto >= 0 ? "receita" : "despesa", subtitulo: "considerando tudo que ainda vai entrar/sair" },
         { titulo: "Saldo realizado", valor: saldoRealizado, tipo: saldoRealizado >= 0 ? "receita" : "despesa", subtitulo: "só o que já foi recebido/pago" },
         { titulo: "Contas a vencer", valor: contasAVencer.length, tipo: "alerta", formato: "numero", subtitulo: contasAVencer.length === 1 ? "conta pendente" : "contas pendentes" },
-        { titulo: "Contas vencidas", valor: contasVencidas.length, tipo: contasVencidas.length ? "despesa" : "neutro", formato: "numero", subtitulo: contasVencidas.length === 1 ? "conta atrasada" : "contas atrasadas" }
+        { titulo: "Contas vencidas", valor: contasVencidas.length, tipo: contasVencidas.length ? "despesa" : "neutro", formato: "numero", subtitulo: contasVencidas.length === 1 ? "conta atrasada" : "contas atrasadas" },
+        { titulo: "Faturas do mês", valor: totalFaturasDoMes, tipo: "despesa", subtitulo: "soma das parcelas de todos os cartões" },
+        ...(limiteTotal > 0
+          ? [{ titulo: "Limite disponível", valor: limiteDisponivel, tipo: "neutro", subtitulo: "somando seus cartões com limite" }]
+          : []),
+        ...(devendoATerceiros > 0
+          ? [{ titulo: "Devendo a terceiros", valor: devendoATerceiros, tipo: "alerta", subtitulo: "cartões de outras pessoas" }]
+          : [])
       ]);
 
       // Gráfico de barras: últimos 6 meses
@@ -146,6 +180,33 @@
         .filter((r) => r.status === "pendente")
         .sort((a, b) => a.data.localeCompare(b.data))
         .slice(0, 6), "receita");
+
+      // Faturas do mês, uma linha por cartão
+      if (!cartoes.length) {
+        listaFaturasDashboard.innerHTML = '<p class="estado-vazio">Nenhum cartão cadastrado ainda.</p>';
+      } else {
+        listaFaturasDashboard.innerHTML = cartoes.map((cartao) => {
+          const total = parcelasDoMes
+            .filter((p) => p.cartaoId === cartao.id)
+            .reduce((soma, p) => soma + (Number(p.valor) || 0), 0);
+
+          return `
+            <div class="item-lancamento">
+              <div>
+                <div class="item-lancamento__descricao">${cartao.nome}</div>
+                <div class="item-lancamento__data">${
+                  cartao.tipo === "terceiro"
+                    ? `Cartão de ${cartao.titular || "outra pessoa"}`
+                    : (cartao.diaVencimento ? `Vence todo dia ${cartao.diaVencimento}` : "Sem vencimento cadastrado")
+                }</div>
+              </div>
+              <div class="item-lancamento__valor numero" style="color: var(--cor-despesa)">
+                ${formatarMoeda(total)}
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
     }
 
     function renderizarLista(container, itens, tipo) {
@@ -181,6 +242,16 @@
 
       observarLista(uidAtual, "despesas", (dados) => {
         despesas = paraLista(dados);
+        recalcularTudo();
+      });
+
+      observarLista(uidAtual, "cartoes", (dados) => {
+        cartoes = paraLista(dados);
+        recalcularTudo();
+      });
+
+      observarLista(uidAtual, "parcelas", (dados) => {
+        parcelas = paraLista(dados);
         recalcularTudo();
       });
     });

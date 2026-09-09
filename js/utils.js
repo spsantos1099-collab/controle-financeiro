@@ -86,3 +86,46 @@ export function dataPertenceAoMes(dataIso, mes) {
 export function somarValores(lista) {
   return lista.reduce((total, item) => total + (Number(item.valor) || 0), 0);
 }
+
+/* --------------------------------------------------------------------
+   FUNÇÕES DE MÊS (usadas pelos cartões, faturas e relatórios)
+   Um "mês" aqui é sempre o texto "aaaa-mm", ex: "2026-09".
+   -------------------------------------------------------------------- */
+
+const NOMES_MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+// Soma (ou subtrai, com número negativo) meses: somarMeses("2026-11", 2) -> "2027-01"
+export function somarMeses(mes, quantidade) {
+  const [ano, numeroMes] = mes.split("-").map(Number);
+  const data = new Date(ano, numeroMes - 1 + quantidade, 1);
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Deixa o mês bonito para mostrar na tela: "2026-09" -> "Setembro de 2026"
+export function formatarMesAno(mes) {
+  const [ano, numeroMes] = mes.split("-").map(Number);
+  return `${NOMES_MESES[numeroMes - 1]} de ${ano}`;
+}
+
+// Quantos dias tem o mês: ultimoDiaDoMes("2026-02") -> 28
+export function ultimoDiaDoMes(mes) {
+  const [ano, numeroMes] = mes.split("-").map(Number);
+  return new Date(ano, numeroMes, 0).getDate();
+}
+
+// Monta uma data ISO sem risco de "dia 31 de fevereiro": se o dia não
+// existir naquele mês, usa o último dia disponível.
+export function dataIsoSegura(mes, dia) {
+  const ultimoDia = ultimoDiaDoMes(mes);
+  const diaValido = Math.min(Math.max(1, Number(dia) || 1), ultimoDia);
+  return `${mes}-${String(diaValido).padStart(2, "0")}`;
+}
+
+// Data de hoje em formato ISO ("aaaa-mm-dd"), respeitando o fuso local
+export function hojeIso() {
+  const agora = new Date();
+  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
+}

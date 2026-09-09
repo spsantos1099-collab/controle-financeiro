@@ -822,3 +822,365 @@ img { max-width: 100%; display: block; }
 
 .nav-paginas a:hover { background: var(--cor-primaria-suave); color: var(--cor-primaria); }
 .nav-paginas a.ativa { background: var(--cor-primaria); color: #fff; }
+
+/* ==========================================================================
+   14. CARTÕES E FATURAS (Etapa 7)
+   ========================================================================== */
+
+/* Título de seção dentro de uma página (ex: "Meus cartões") */
+.secao-titulo {
+  font-family: var(--fonte-titulo);
+  font-size: 18px;
+  font-weight: 600;
+  margin: var(--esp-6) 0 var(--esp-4);
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.secao-titulo__aviso {
+  font-family: var(--fonte-texto);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--cor-texto-suave);
+}
+
+/* Vários botões lado a lado no cabeçalho da página */
+.acoes-cabecalho {
+  display: flex;
+  gap: var(--esp-2);
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------------
+   Grade dos cartões cadastrados
+   -------------------------------------------------------------------- */
+.grade-cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--esp-5);
+}
+
+.cartao-item {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-lg);
+  overflow: hidden;
+  transition: box-shadow var(--transicao-suave), transform var(--transicao-suave);
+}
+
+.cartao-item:hover {
+  box-shadow: var(--sombra-card);
+  transform: translateY(-2px);
+}
+
+/* O retângulo colorido, no estilo dos apps de banco */
+.cartao-visual {
+  background: linear-gradient(135deg,
+              var(--cor-cartao) 0%,
+              color-mix(in srgb, var(--cor-cartao) 70%, #000) 100%);
+  color: #fff;
+  padding: var(--esp-5);
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.cartao-visual__topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.cartao-visual__bandeira { font-weight: 600; }
+
+.cartao-visual__nome {
+  font-family: var(--fonte-titulo);
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.cartao-visual__rodape {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--esp-3);
+}
+
+.cartao-visual__rotulo {
+  display: block;
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 2px;
+}
+
+.cartao-visual__valor {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.cartao-visual__datas {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 11px;
+  opacity: 0.85;
+  text-align: right;
+}
+
+/* Parte branca embaixo do cartão: limite e ações */
+.cartao-detalhes { padding: var(--esp-4) var(--esp-5) var(--esp-5); }
+
+.cartao-barra {
+  height: 6px;
+  background: var(--cor-superficie-alt);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: var(--esp-3);
+}
+
+.cartao-barra__preenchimento {
+  height: 100%;
+  border-radius: 999px;
+  transition: width var(--transicao-suave);
+}
+
+.cartao-limites {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  margin-bottom: var(--esp-3);
+}
+
+.cartao-limites strong {
+  display: block;
+  color: var(--cor-texto);
+  font-size: 14px;
+}
+
+.cartao-acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--esp-1);
+  border-top: 1px solid var(--cor-borda);
+  padding-top: var(--esp-3);
+}
+
+/* Cartão "fantasma" para adicionar um novo */
+.cartao-adicionar {
+  border: 2px dashed var(--cor-borda);
+  border-radius: var(--raio-lg);
+  background: transparent;
+  color: var(--cor-texto-suave);
+  font-family: var(--fonte-texto);
+  font-size: 14px;
+  min-height: 240px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-2);
+  transition: all var(--transicao-rapida);
+}
+
+.cartao-adicionar:hover {
+  border-color: var(--cor-primaria);
+  color: var(--cor-primaria);
+  background: var(--cor-primaria-suave);
+}
+
+.cartao-adicionar span:first-child { font-size: 28px; line-height: 1; }
+
+/* --------------------------------------------------------------------
+   Navegação de mês da fatura (◀ Setembro de 2026 ▶)
+   -------------------------------------------------------------------- */
+.seletor-mes {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--esp-2) var(--esp-3);
+  width: fit-content;
+  margin-bottom: var(--esp-4);
+}
+
+.seletor-mes__mes {
+  font-family: var(--fonte-titulo);
+  font-weight: 600;
+  min-width: 170px;
+  text-align: center;
+}
+
+.seletor-mes button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--cor-texto-suave);
+  font-size: 16px;
+  padding: var(--esp-1) var(--esp-3);
+  border-radius: var(--raio-sm);
+  transition: all var(--transicao-rapida);
+}
+
+.seletor-mes button:hover { background: var(--cor-superficie-alt); color: var(--cor-texto); }
+
+/* --------------------------------------------------------------------
+   Fatura de um cartão em um mês
+   -------------------------------------------------------------------- */
+.fatura {
+  background: var(--cor-superficie);
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-md);
+  padding: var(--esp-5);
+  margin-bottom: var(--esp-4);
+}
+
+.fatura__cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--esp-3);
+  flex-wrap: wrap;
+  padding-bottom: var(--esp-3);
+  border-bottom: 1px solid var(--cor-borda);
+  margin-bottom: var(--esp-3);
+}
+
+.fatura__identificacao { display: flex; align-items: center; gap: var(--esp-3); }
+
+.fatura__cor {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.fatura__nome { font-weight: 600; }
+.fatura__vencimento { font-size: 12px; color: var(--cor-texto-suave); }
+
+.fatura__total {
+  font-family: var(--fonte-numero);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.linha-parcela {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-3) 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.linha-parcela:last-child { border-bottom: none; }
+
+.linha-parcela__descricao { font-weight: 500; }
+.linha-parcela__categoria { font-size: 12px; color: var(--cor-texto-suave); }
+
+.chip-parcela {
+  font-family: var(--fonte-numero);
+  font-size: 11px;
+  padding: 2px var(--esp-2);
+  border-radius: 999px;
+  background: var(--cor-superficie-alt);
+  color: var(--cor-texto-suave);
+}
+
+.linha-parcela__valor { font-weight: 600; text-align: right; }
+.linha-parcela--paga .linha-parcela__descricao { text-decoration: line-through; opacity: 0.6; }
+
+@media (max-width: 640px) {
+  .linha-parcela { grid-template-columns: 1fr auto; row-gap: var(--esp-2); }
+}
+
+/* --------------------------------------------------------------------
+   Prévia do parcelamento dentro do formulário de compra
+   -------------------------------------------------------------------- */
+.previa-parcelas {
+  grid-column: 1 / -1;
+  background: var(--cor-primaria-suave);
+  border-radius: var(--raio-sm);
+  padding: var(--esp-3) var(--esp-4);
+  font-size: 13px;
+  color: var(--cor-primaria);
+  line-height: 1.6;
+}
+
+html[data-tema="escuro"] .previa-parcelas { color: var(--cor-texto); }
+
+/* Paleta de cores do cartão */
+.paleta-cores { display: flex; gap: var(--esp-2); flex-wrap: wrap; }
+
+.paleta-cores button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--transicao-rapida);
+}
+
+.paleta-cores button:hover { transform: scale(1.12); }
+.paleta-cores button.selecionada { border-color: var(--cor-texto); transform: scale(1.12); }
+
+/* --------------------------------------------------------------------
+   Campos opcionais e blocos recolhíveis nos formulários
+   -------------------------------------------------------------------- */
+.rotulo-opcional {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--cor-texto-suave);
+  background: var(--cor-superficie-alt);
+  padding: 1px var(--esp-2);
+  border-radius: 999px;
+  margin-left: var(--esp-1);
+}
+
+.detalhes-opcionais {
+  grid-column: 1 / -1;
+  border: 1px solid var(--cor-borda);
+  border-radius: var(--raio-sm);
+  padding: var(--esp-3) var(--esp-4);
+  margin-bottom: var(--esp-4);
+}
+
+.detalhes-opcionais > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cor-texto-suave);
+  list-style: none;
+}
+
+.detalhes-opcionais > summary::before { content: "▸ "; }
+.detalhes-opcionais[open] > summary::before { content: "▾ "; }
+.detalhes-opcionais > summary::-webkit-details-marker { display: none; }
+.detalhes-opcionais > summary:hover { color: var(--cor-primaria); }
+
+.dica-formulario {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--cor-texto-suave);
+  margin-bottom: var(--esp-2);
+}
+
+/* Botões de aba dentro de formulários (Meu cartão / De outra pessoa) */
+.abas-login .aba-login {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--fonte-texto);
+}
