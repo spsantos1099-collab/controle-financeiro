@@ -113,6 +113,7 @@
     import {
       estruturaDoMes, dataIsoDoDia, dataPorExtenso, valorCurto
     } from "../components/calendario.js";
+    import { consolidarParcelasRecorrentes } from "../components/cartoes.js";
 
     let uidAtual = null;
     let receitas = [];
@@ -434,7 +435,7 @@
         marcarCarregado("compras");
       });
       observarLista(uidAtual, "parcelas", (dados) => {
-        parcelas = paraLista(dados);
+        parcelas = consolidarParcelasRecorrentes(paraLista(dados));
         marcarCarregado("parcelas");
       });
     });

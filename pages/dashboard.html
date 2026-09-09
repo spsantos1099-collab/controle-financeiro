@@ -72,6 +72,7 @@
     } from "../js/utils.js";
     import { renderizarCards } from "../components/cards.js";
     import { criarGraficoBarras, criarGraficoDonut } from "../components/charts.js";
+    import { consolidarParcelasRecorrentes } from "../components/cartoes.js";
 
     let uidAtual = null;
     let receitas = [];
@@ -252,7 +253,7 @@
       });
 
       observarLista(uidAtual, "parcelas", (dados) => {
-        parcelas = paraLista(dados);
+        parcelas = consolidarParcelasRecorrentes(paraLista(dados));
         recalcularTudo();
       });
     });

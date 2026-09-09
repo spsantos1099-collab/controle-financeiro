@@ -84,6 +84,13 @@ export async function adicionarRegistro(uid, subcaminho, dados) {
   return referencia.key;
 }
 
+// Salva um registro usando um ID definido pelo próprio sistema.
+// Útil quando o registro precisa ser idempotente: repetir a mesma
+// gravação atualiza o mesmo item em vez de criar uma cópia duplicada.
+export function salvarRegistroComId(uid, subcaminho, id, dados) {
+  return set(ref(db, `${caminhoUsuario(uid, subcaminho)}/${id}`), dados);
+}
+
 // Atualiza campos específicos de um registro existente
 export function atualizarRegistro(uid, subcaminho, id, dados) {
   return update(ref(db, `${caminhoUsuario(uid, subcaminho)}/${id}`), dados);

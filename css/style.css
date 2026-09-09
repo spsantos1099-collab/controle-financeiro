@@ -1099,10 +1099,17 @@ img { max-width: 100%; display: block; }
 }
 
 .linha-parcela__valor { font-weight: 600; text-align: right; }
+.linha-parcela__acoes {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--esp-1);
+}
 .linha-parcela--paga .linha-parcela__descricao { text-decoration: line-through; opacity: 0.6; }
 
 @media (max-width: 640px) {
   .linha-parcela { grid-template-columns: 1fr auto; row-gap: var(--esp-2); }
+  .linha-parcela__acoes { justify-self: end; }
 }
 
 /* --------------------------------------------------------------------

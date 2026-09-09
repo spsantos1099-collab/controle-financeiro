@@ -99,7 +99,7 @@
 
     import {
       observarUsuario, observarLista,
-      adicionarRegistro, atualizarRegistro, removerRegistro
+      adicionarRegistro, salvarRegistroComId, atualizarRegistro, removerRegistro
     } from "../js/firebase.js";
 
     import {
@@ -109,8 +109,8 @@
 
     import {
       BANDEIRAS, CORES_CARTAO, ehCartaoDeTerceiro,
-      gerarParcelasDaCompra, gerarParcelasRecorrentes, MESES_ANTECIPACAO_ASSINATURA,
-      resumirCartao, renderizarCartaoVisual, mesFaturaDaCompra
+      gerarParcelasDaCompra, gerarParcelasRecorrentes, consolidarParcelasRecorrentes,
+      MESES_ANTECIPACAO_ASSINATURA, resumirCartao, renderizarCartaoVisual, mesFaturaDaCompra
     } from "../components/cartoes.js";
 
     import { CATEGORIAS_DESPESA_PADRAO } from "../js/config.js";
@@ -122,6 +122,7 @@
     let cartoes = [];
     let compras = [];
     let parcelas = [];
+    let parcelasBrutas = [];
     let mesSelecionado = mesAtual();
 
     const gradeCartoes = document.getElementById("gradeCartoes");
@@ -241,10 +242,16 @@
                   ${p.recorrente ? "↻ assinatura" : `${p.numero}/${p.totalParcelas}`}
                 </span>
                 <div class="linha-parcela__valor numero">${formatarMoeda(p.valor)}</div>
-                <button class="botao-icone" title="${p.pago ? "Marcar como não paga" : "Marcar como paga"}"
-                        data-acao="alternar-parcela" data-id="${p.id}">
-                  ${p.pago ? "✅" : "⬜"}
-                </button>
+                <div class="linha-parcela__acoes">
+                  <button class="botao-icone" title="${p.pago ? "Marcar como não paga" : "Marcar como paga"}"
+                          data-acao="alternar-parcela" data-id="${p.id}">
+                    ${p.pago ? "✅" : "⬜"}
+                  </button>
+                  <button class="botao-icone botao-icone--perigo"
+                          title="Remover somente desta fatura"
+                          aria-label="Remover ${p.descricao || "lançamento"} somente desta fatura"
+                          data-acao="excluir-parcela-fatura" data-id="${p.id}" type="button">🗑️</button>
+                </div>
               </div>
             `).join("")
           : '<p class="estado-vazio">Nenhuma parcela nesta fatura.</p>';
@@ -356,7 +363,7 @@
         if (!confirmou) return;
 
         try {
-          await Promise.all(parcelas.filter((p) => p.cartaoId === id)
+          await Promise.all(parcelasBrutas.filter((p) => p.cartaoId === id)
             .map((p) => removerRegistro(uidAtual, "parcelas", p.id)));
           await Promise.all(comprasDoCartao
             .map((c) => removerRegistro(uidAtual, "compras", c.id)));
@@ -375,6 +382,81 @@
           pago: !parcela.pago,
           updatedAt: Date.now()
         });
+      }
+
+      if (acao === "excluir-parcela-fatura") {
+        const parcela = parcelas.find((p) => p.id === id);
+        if (!parcela) return;
+
+        const compra = compras.find((c) => c.id === parcela.compraId);
+        if (!compra) {
+          const confirmou = await confirmarExclusao(
+            `Remover "${parcela.descricao || "este lançamento"}" somente desta fatura?`
+          );
+          if (!confirmou) return;
+          await removerRegistro(uidAtual, "parcelas", parcela.id);
+          mostrarToast("Lançamento removido desta fatura.", "sucesso");
+          return;
+        }
+
+        const mensagem = parcela.recorrente
+          ? `Remover "${parcela.descricao}" somente da fatura de ${formatarMesAno(parcela.mesFatura)}? A assinatura continuará normalmente nos outros meses.`
+          : `Remover somente a parcela ${parcela.numero}/${parcela.totalParcelas} de "${parcela.descricao}" desta fatura? As demais parcelas continuarão cadastradas.`;
+
+        const confirmou = await confirmarExclusao(mensagem);
+        if (!confirmou) return;
+
+        try {
+          if (parcela.recorrente) {
+            // Registra o mês como uma exceção da assinatura. Assim o
+            // sincronizador não recria esta cobrança no futuro.
+            const cobrancasExcluidas = {
+              ...(compra.cobrancasExcluidas || {}),
+              [parcela.mesFatura]: true
+            };
+
+            await atualizarRegistro(uidAtual, "compras", compra.id, {
+              cobrancasExcluidas,
+              updatedAt: Date.now()
+            });
+
+            // Remove todas as cópias brutas deste mesmo mês. Isso também
+            // resolve eventual duplicidade antiga que ainda esteja no banco.
+            const cobrancasDoMes = parcelasBrutas.filter((p) =>
+              p.compraId === compra.id &&
+              p.recorrente &&
+              p.mesFatura === parcela.mesFatura
+            );
+            await Promise.all(
+              cobrancasDoMes.map((p) => removerRegistro(uidAtual, "parcelas", p.id))
+            );
+          } else {
+            // Para compras parceladas, guarda o número removido para ele
+            // não reaparecer caso a compra seja editada e regerada depois.
+            const parcelasExcluidas = {
+              ...(compra.parcelasExcluidas || {}),
+              [String(parcela.numero)]: true
+            };
+
+            await atualizarRegistro(uidAtual, "compras", compra.id, {
+              parcelasExcluidas,
+              updatedAt: Date.now()
+            });
+
+            const copiasDaParcela = parcelasBrutas.filter((p) =>
+              p.compraId === compra.id &&
+              !p.recorrente &&
+              Number(p.numero) === Number(parcela.numero)
+            );
+            await Promise.all(
+              copiasDaParcela.map((p) => removerRegistro(uidAtual, "parcelas", p.id))
+            );
+          }
+
+          mostrarToast("Lançamento removido somente desta fatura.", "sucesso");
+        } catch (erro) {
+          mostrarToast("Não foi possível remover este lançamento da fatura.", "erro");
+        }
       }
 
       if (acao === "pagar-fatura") {
@@ -431,7 +513,7 @@
 
           // Remove só as cobranças futuras que ainda não foram pagas;
           // o que já foi lançado (passado ou já pago) fica intacto.
-          const futurasNaoPagas = parcelas.filter(
+          const futurasNaoPagas = parcelasBrutas.filter(
             (p) => p.compraId === id && !p.pago && p.mesFatura > dataFim
           );
           await Promise.all(futurasNaoPagas.map((p) => removerRegistro(uidAtual, "parcelas", p.id)));
@@ -851,9 +933,70 @@
           )
         : gerarParcelasDaCompra(compra, cartao, parcelasAntigas);
 
+      if (compra.recorrente) {
+        // Assinaturas usam um ID determinístico por mês. Assim, mesmo que
+        // dois processos tentem gerar Setembro ao mesmo tempo, ambos gravam
+        // exatamente no mesmo registro em vez de criar duas cobranças.
+        await Promise.all(
+          novasParcelas.map((parcela) =>
+            salvarRegistroComId(
+              uidAtual,
+              "parcelas",
+              `${compra.id}_${parcela.mesFatura}`,
+              parcela
+            )
+          )
+        );
+        return;
+      }
+
       await Promise.all(
         novasParcelas.map((parcela) => adicionarRegistro(uidAtual, "parcelas", parcela))
       );
+    }
+
+    // Corrige automaticamente as duplicidades que já possam ter sido
+    // gravadas pela versão anterior. Só considera duplicada quando é
+    // a MESMA assinatura (mesmo compraId) no MESMO mês. Assinaturas
+    // diferentes com o mesmo nome/valor nunca são misturadas.
+    let corrigindoDuplicatasAssinaturas = false;
+
+    async function corrigirDuplicatasAssinaturas(listaOriginal) {
+      if (corrigindoDuplicatasAssinaturas || !uidAtual) return;
+
+      const grupos = new Map();
+      for (const parcela of listaOriginal) {
+        if (!parcela.recorrente || !parcela.compraId || !parcela.mesFatura) continue;
+        const chave = `${parcela.compraId}::${parcela.mesFatura}`;
+        if (!grupos.has(chave)) grupos.set(chave, []);
+        grupos.get(chave).push(parcela);
+      }
+
+      const duplicados = [...grupos.values()].filter((grupo) => grupo.length > 1);
+      if (!duplicados.length) return;
+
+      corrigindoDuplicatasAssinaturas = true;
+      try {
+        for (const grupo of duplicados) {
+          // Prefere preservar uma cópia que já esteja paga.
+          const manter = grupo.find((p) => p.pago) || grupo[0];
+          const algumaPaga = grupo.some((p) => p.pago);
+
+          if (algumaPaga && !manter.pago) {
+            await atualizarRegistro(uidAtual, "parcelas", manter.id, {
+              pago: true,
+              updatedAt: Date.now()
+            });
+          }
+
+          const extras = grupo.filter((p) => p.id !== manter.id);
+          await Promise.all(
+            extras.map((p) => removerRegistro(uidAtual, "parcelas", p.id))
+          );
+        }
+      } finally {
+        corrigindoDuplicatasAssinaturas = false;
+      }
     }
 
     /* --------------------------------------------------------------
@@ -904,7 +1047,7 @@
 
     async function removerParcelasDaCompra(compraId) {
       await Promise.all(
-        parcelas.filter((p) => p.compraId === compraId)
+        parcelasBrutas.filter((p) => p.compraId === compraId)
           .map((p) => removerRegistro(uidAtual, "parcelas", p.id))
       );
     }
@@ -931,9 +1074,13 @@
       });
 
       observarLista(uidAtual, "parcelas", (dados) => {
-        parcelas = paraLista(dados);
+        parcelasBrutas = paraLista(dados);
+        // A tela nunca mostra duas cobranças da mesma assinatura no mesmo mês,
+        // mesmo enquanto a limpeza automática do banco está acontecendo.
+        parcelas = consolidarParcelasRecorrentes(parcelasBrutas);
         renderizarCartoes();
         renderizarFaturas();
+        corrigirDuplicatasAssinaturas(parcelasBrutas);
         sincronizarAssinaturas();
       });
     });

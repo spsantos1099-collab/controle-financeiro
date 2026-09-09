@@ -143,12 +143,20 @@ export function gerarParcelasRecorrentes(compra, cartao, mesLimite, parcelasAnti
   if (mesFinal < mesInicio) return [];
 
   const pagasPorMes = new Set(parcelasAntigas.filter((p) => p.pago).map((p) => p.mesFatura));
+  const cobrancasExcluidas = compra.cobrancasExcluidas || {};
   const diaVencimento = Number(cartao.diaVencimento) || 0;
   const agora = Date.now();
   const parcelas = [];
 
   let mes = mesInicio;
   while (mes <= mesFinal) {
+    // Uma cobrança removida manualmente de um mês específico não deve
+    // reaparecer quando o sistema completar os 12 meses futuros.
+    if (cobrancasExcluidas[mes]) {
+      mes = somarMeses(mes, 1);
+      continue;
+    }
+
     parcelas.push({
       compraId: compra.id,
       cartaoId: compra.cartaoId,
@@ -166,6 +174,42 @@ export function gerarParcelasRecorrentes(compra, cartao, mesLimite, parcelasAnti
   }
 
   return parcelas;
+}
+
+// Remove duplicidades visuais de cobranças recorrentes.
+// A chave correta de uma assinatura é: uma cobrança por compra + mês.
+// Se por qualquer motivo o banco contiver duas cópias do mesmo mês,
+// a interface considera apenas uma e preserva o status "pago" caso
+// alguma das cópias já tenha sido quitada.
+export function consolidarParcelasRecorrentes(lista = []) {
+  const resultado = [];
+  const indicePorChave = new Map();
+
+  for (const parcela of Array.isArray(lista) ? lista : []) {
+    if (!parcela?.recorrente || !parcela.compraId || !parcela.mesFatura) {
+      resultado.push(parcela);
+      continue;
+    }
+
+    const chave = `${parcela.compraId}::${parcela.mesFatura}`;
+    if (!indicePorChave.has(chave)) {
+      indicePorChave.set(chave, resultado.length);
+      resultado.push({ ...parcela });
+      continue;
+    }
+
+    const indice = indicePorChave.get(chave);
+    const atual = resultado[indice];
+
+    // Se uma das cópias está paga, a cobrança consolidada também fica paga.
+    if (parcela.pago && !atual.pago) {
+      resultado[indice] = { ...parcela, pago: true };
+    } else if (parcela.pago) {
+      resultado[indice] = { ...atual, pago: true };
+    }
+  }
+
+  return resultado;
 }
 
 export function gerarParcelasDaCompra(compra, cartao, parcelasAntigas = []) {
@@ -187,11 +231,16 @@ export function gerarParcelasDaCompra(compra, cartao, parcelasAntigas = []) {
     parcelasAntigas.filter((p) => p.pago).map((p) => Number(p.numero))
   );
 
+  const parcelasExcluidas = compra.parcelasExcluidas || {};
   const diaVencimento = Number(cartao.diaVencimento) || 0;
   const agora = Date.now();
   const parcelas = [];
 
   for (let numero = parcelaInicial; numero <= quantidade; numero += 1) {
+    // Se o usuário removeu manualmente uma parcela específica da fatura,
+    // respeitamos essa escolha mesmo depois de editar a compra.
+    if (parcelasExcluidas[String(numero)]) continue;
+
     const mesFatura = somarMeses(mesPrimeiraFatura, numero - parcelaInicial);
 
     parcelas.push({
