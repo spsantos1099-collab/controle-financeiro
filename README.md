@@ -138,3 +138,7 @@ A preferência é salva localmente e no perfil. A tela de login permanece sempre
 ## Publicação
 
 O projeto não tem etapa de build. No GitHub, `index.html`, `assets/`, `css/`, `js/`, `components/` e `pages/` devem permanecer na raiz do repositório. Na Netlify, o diretório de publicação é a raiz (`.` ou vazio, conforme a interface).
+
+## Navegação lateral
+
+A navegação principal das páginas internas usa uma barra lateral fixa e recolhível. No modo compacto, apenas os ícones ficam visíveis e o nome da seção aparece ao passar o mouse ou focar pelo teclado. A seta no topo expande/recolhe a barra e a preferência fica salva localmente no navegador.

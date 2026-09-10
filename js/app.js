@@ -33,6 +33,9 @@ async function carregarIdentidadeDoPerfil(usuario) {
   document.querySelectorAll("[data-usuario-iniciais]").forEach((elemento) => {
     elemento.textContent = iniciaisPerfil(perfil, usuario);
   });
+  document.querySelectorAll("[data-usuario-nome-menu]").forEach((elemento) => {
+    elemento.textContent = resumo;
+  });
 }
 
 async function sincronizarTemaDoPerfil(usuario) {
@@ -66,6 +69,70 @@ function inserirMarcaSistema() {
   main.insertBefore(marca, topo);
 }
 
+
+function configurarMenuDaConta() {
+  const container = document.querySelector(".topo-app__usuario");
+  if (!container || container.dataset.menuContaPronto === "true") return;
+
+  container.dataset.menuContaPronto = "true";
+  const raiz = document.body.dataset.raiz || "";
+
+  container.innerHTML = `
+    <div class="menu-conta">
+      <button type="button" class="menu-conta__gatilho" aria-haspopup="true" aria-expanded="false">
+        <strong data-usuario-resumo>Olá, Minha conta</strong>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4"></path></svg>
+      </button>
+      <div class="menu-conta__painel" hidden>
+        <div class="menu-conta__cabecalho">
+          <span class="menu-conta__avatar" data-usuario-iniciais>MC</span>
+          <div class="menu-conta__identidade">
+            <strong data-usuario-nome-menu>Minha conta</strong>
+            <span data-usuario-email></span>
+          </div>
+        </div>
+        <div class="menu-conta__separador" aria-hidden="true"></div>
+        <a class="menu-conta__acao" href="${raiz}pages/configuracoes.html">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3"></circle><path d="M5.5 20a6.5 6.5 0 0 1 13 0"></path></svg>
+          <span>Perfil e configurações</span>
+        </a>
+        <button data-sair class="menu-conta__acao menu-conta__acao--sair" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5"></path><path d="M14 8l4 4-4 4"></path><path d="M18 12H9"></path></svg>
+          <span>Sair</span>
+        </button>
+      </div>
+    </div>`;
+
+  const gatilho = container.querySelector(".menu-conta__gatilho");
+  const painel = container.querySelector(".menu-conta__painel");
+
+  const fechar = () => {
+    painel.hidden = true;
+    gatilho.setAttribute("aria-expanded", "false");
+    container.classList.remove("menu-conta-aberto");
+  };
+
+  const abrir = () => {
+    painel.hidden = false;
+    gatilho.setAttribute("aria-expanded", "true");
+    container.classList.add("menu-conta-aberto");
+  };
+
+  gatilho.addEventListener("click", (evento) => {
+    evento.stopPropagation();
+    if (painel.hidden) abrir(); else fechar();
+  });
+
+  painel.addEventListener("click", (evento) => evento.stopPropagation());
+  document.addEventListener("click", fechar);
+  document.addEventListener("keydown", (evento) => {
+    if (evento.key === "Escape" && !painel.hidden) {
+      fechar();
+      gatilho.focus();
+    }
+  });
+}
+
 function protegerPaginaSeNecessario() {
   const paginaProtegida = document.body.dataset.protegida === "true";
   if (!paginaProtegida) return;
@@ -85,6 +152,9 @@ function protegerPaginaSeNecessario() {
       const nomeInicial = usuario.displayName || usuario.email || "Minha conta";
       elemento.textContent = `Olá, ${nomeInicial}`;
     });
+    document.querySelectorAll("[data-usuario-nome-menu]").forEach((elemento) => {
+      elemento.textContent = usuario.displayName || usuario.email || "Minha conta";
+    });
 
     sincronizarTemaDoPerfil(usuario);
     carregarIdentidadeDoPerfil(usuario);
@@ -101,6 +171,7 @@ function protegerPaginaSeNecessario() {
 
 function iniciarAplicacao() {
   inserirMarcaSistema();
+  configurarMenuDaConta();
   protegerPaginaSeNecessario();
   document.documentElement.classList.add("app-iniciada");
 }
