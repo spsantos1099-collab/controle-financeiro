@@ -3058,3 +3058,147 @@ body[data-tela-login="true"] select {
 }
 .marca-sistema { margin: 0 0 10px; }
 @media (max-width: 760px) { .marca-sistema { margin-top: 0; } }
+
+
+/* ==========================================================================
+   FLUXO — HIERARQUIA DE MARCA E RESUMOS INTERATIVOS DO DASHBOARD
+   ========================================================================== */
+
+/* A marca é a identidade principal da página; o título da seção vem abaixo. */
+.marca-sistema {
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.marca-sistema img {
+  width: 34px;
+  height: 34px;
+}
+.marca-sistema span {
+  gap: 10px;
+  align-items: baseline;
+}
+.marca-sistema strong {
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 720;
+  letter-spacing: -0.035em;
+}
+.marca-sistema small {
+  font-size: 10.5px;
+  line-height: 1;
+}
+.topo-app__titulo {
+  font-size: 19px;
+  font-weight: 640;
+}
+.topo-app__usuario strong {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* Cards clicáveis: a interação fica perceptível sem transformar tudo em botão. */
+.dashboard-resumo-clicavel {
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  outline: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-resumo-clicavel:hover {
+    border-color: color-mix(in srgb, var(--cor-primaria) 38%, var(--cor-borda));
+    background: color-mix(in srgb, var(--cor-primaria-suave) 24%, var(--cor-superficie));
+    transform: translateY(-1px);
+  }
+}
+.dashboard-resumo-clicavel:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cor-primaria) 18%, transparent);
+  border-color: var(--cor-primaria);
+}
+.dashboard-resumo-clicavel:active { transform: translateY(0); }
+
+.dashboard-modal { min-width: 0; }
+.dashboard-modal__cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+.dashboard-modal__cabecalho p {
+  margin: 0 0 4px;
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+}
+.dashboard-modal__cabecalho h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+}
+.dashboard-modal__fechar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: var(--cor-superficie);
+  color: var(--cor-texto-suave);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.dashboard-modal__fechar:hover { color: var(--cor-texto); border-color: var(--cor-primaria); }
+.dashboard-modal__valor {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--cor-texto);
+  font-size: clamp(24px, 4vw, 31px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+.dashboard-modal__linhas {
+  border-top: 1px solid var(--cor-borda);
+  border-bottom: 1px solid var(--cor-borda);
+}
+.dashboard-modal__linha {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 0;
+  color: var(--cor-texto-suave);
+  font-size: 12px;
+}
+.dashboard-modal__linha + .dashboard-modal__linha { border-top: 1px solid color-mix(in srgb, var(--cor-borda) 72%, transparent); }
+.dashboard-modal__linha strong {
+  color: var(--cor-texto);
+  font-size: 13px;
+  font-weight: 650;
+  text-align: right;
+}
+.dashboard-modal__linha--destaque {
+  color: var(--cor-texto);
+  font-weight: 620;
+}
+.dashboard-modal__linha--destaque strong { font-size: 15px; }
+.dashboard-modal__observacao {
+  margin: 13px 0 0;
+  color: var(--cor-texto-suave);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .marca-sistema img { width: 30px; height: 30px; }
+  .marca-sistema strong { font-size: 20px; }
+  .marca-sistema small { display: inline; font-size: 9.5px; }
+  .topo-app__titulo { font-size: 18px; }
+  .topo-app__usuario { align-items: center; }
+}
+
+@media (max-width: 520px) {
+  .marca-sistema span { display: block; }
+  .marca-sistema strong { display: block; }
+  .marca-sistema small { display: block; margin-top: 4px; }
+  .dashboard-modal__linha { gap: 12px; }
+}

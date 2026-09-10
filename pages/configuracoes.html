@@ -156,7 +156,7 @@
     function atualizarPreviewPerfil() {
       const nome = nomeVisual();
       document.getElementById("perfilNomeVisual").textContent = nome;
-      document.querySelectorAll("[data-usuario-resumo]").forEach((el) => el.textContent = nome);
+      document.querySelectorAll("[data-usuario-resumo]").forEach((el) => el.textContent = `Olá, ${nome}`);
       const avatar = document.getElementById("perfilAvatar");
       const foto = usuarioAtual?.photoURL;
       if (foto) {

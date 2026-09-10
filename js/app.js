@@ -28,7 +28,7 @@ async function carregarIdentidadeDoPerfil(usuario) {
 
   const resumo = nomeCompletoPerfil(perfil, usuario);
   document.querySelectorAll("[data-usuario-resumo]").forEach((elemento) => {
-    elemento.textContent = resumo;
+    elemento.textContent = `Olá, ${resumo}`;
   });
   document.querySelectorAll("[data-usuario-iniciais]").forEach((elemento) => {
     elemento.textContent = iniciaisPerfil(perfil, usuario);
@@ -82,7 +82,8 @@ function protegerPaginaSeNecessario() {
       elemento.textContent = usuario.email || "";
     });
     document.querySelectorAll("[data-usuario-resumo]").forEach((elemento) => {
-      elemento.textContent = usuario.displayName || usuario.email || "Minha conta";
+      const nomeInicial = usuario.displayName || usuario.email || "Minha conta";
+      elemento.textContent = `Olá, ${nomeInicial}`;
     });
 
     sincronizarTemaDoPerfil(usuario);
