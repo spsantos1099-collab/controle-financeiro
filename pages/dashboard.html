@@ -41,7 +41,7 @@
     </nav>
 
     <section class="dashboard-principal" aria-label="Resumo financeiro principal">
-      <article class="dashboard-card dashboard-card--destaque dashboard-resumo-clicavel" data-resumo-dashboard="saldo" role="button" tabindex="0" aria-label="Ver detalhes do saldo disponível">
+      <article class="dashboard-card dashboard-resumo-clicavel" data-resumo-dashboard="saldo" role="button" tabindex="0" aria-label="Ver detalhes do saldo disponível">
         <span class="dashboard-card__rotulo">Saldo disponível</span>
         <strong class="dashboard-card__valor numero" id="valorSaldoAtual">R$ 0,00</strong>
         <span class="dashboard-card__apoio" id="apoioSaldoAtual">após pagamentos e valores reservados</span>
@@ -398,7 +398,224 @@
       return { despesasVencidas, faturasVencidas };
     }
 
-    function abrirResumoDashboard(tipo) {
+    function itemDetalhe(descricao, valor, meta = "", tipo = "") {
+      return {
+        descricao: String(descricao || "Lançamento"),
+        valor: Number(valor) || 0,
+        meta: String(meta || ""),
+        tipo
+      };
+    }
+
+    function secaoDetalhes(titulo, itens, vazio = "Nenhum lançamento neste grupo.") {
+      const lista = Array.isArray(itens) ? itens : [];
+      return `
+        <section class="dashboard-modal__detalhes">
+          <div class="dashboard-modal__detalhes-cabecalho">
+            <h4>${escapeHtml(titulo)}</h4>
+            <span>${lista.length} ${lista.length === 1 ? "item" : "itens"}</span>
+          </div>
+          ${lista.length ? `
+            <div class="dashboard-modal__lista-detalhes">
+              ${lista.map((item) => `
+                <div class="dashboard-modal__item">
+                  <div class="dashboard-modal__item-texto">
+                    <strong>${escapeHtml(item.descricao)}</strong>
+                    ${item.meta ? `<span>${escapeHtml(item.meta)}</span>` : ""}
+                  </div>
+                  <strong class="numero${item.tipo === "receita" ? " valor-receita" : item.tipo === "despesa" ? " valor-despesa" : ""}">${formatarMoeda(item.valor)}</strong>
+                </div>
+              `).join("")}
+            </div>
+          ` : `<p class="dashboard-modal__vazio">${escapeHtml(vazio)}</p>`}
+        </section>`;
+    }
+
+    function recebimentosRegularesDetalhados(mes, recebidos = true) {
+      return receitas
+        .filter((receita) => (receita.data || "").slice(0, 7) === mes)
+        .filter((receita) => recebidos ? receita.status === "recebido" : receita.status !== "recebido")
+        .sort((a, b) => String(a.data || "").localeCompare(String(b.data || "")))
+        .map((receita) => itemDetalhe(
+          receita.descricao || "Receita",
+          receita.valor,
+          [receita.categoria || "Receita", receita.data ? formatarData(receita.data) : ""].filter(Boolean).join(" · "),
+          "receita"
+        ));
+    }
+
+    function recebimentosDePessoasDetalhados(mes) {
+      return dividasReceber
+        .filter((item) => item.status === "recebido" && (item.dataRecebimento || "").slice(0, 7) === mes)
+        .sort((a, b) => String(a.dataRecebimento || "").localeCompare(String(b.dataRecebimento || "")))
+        .map((item) => itemDetalhe(
+          item.pessoa || "Pessoa",
+          item.valor,
+          [item.descricao || "Valor recebido", item.dataRecebimento ? formatarData(item.dataRecebimento) : ""].filter(Boolean).join(" · "),
+          "receita"
+        ));
+    }
+
+    function despesasComunsDetalhadas(mes, apenasPagas = false) {
+      return despesas
+        .filter((despesa) => (despesa.data || "").slice(0, 7) === mes)
+        .filter((despesa) => !String(despesa.pessoaRelacionada || "").trim())
+        .filter((despesa) => apenasPagas ? despesa.status === "pago" : true)
+        .sort((a, b) => String(a.data || "").localeCompare(String(b.data || "")))
+        .map((despesa) => itemDetalhe(
+          despesa.descricao || "Despesa",
+          despesa.valor,
+          [despesa.categoria || "Despesa", despesa.data ? formatarData(despesa.data) : "", despesa.status === "pago" ? "Pago" : "Pendente"].filter(Boolean).join(" · "),
+          "despesa"
+        ));
+    }
+
+    function faturasDetalhadas(mes, { apenasProprios = false, apenasTerceiros = false, somentePagas = false } = {}) {
+      const dados = dadosFinanceiros();
+      return cartoes
+        .filter((cartao) => apenasProprios ? cartao.tipo !== "terceiro" : apenasTerceiros ? cartao.tipo === "terceiro" : true)
+        .map((cartao) => {
+          const total = totalFaturaCartao(dados, cartao.id, mes);
+          if (total <= 0) return null;
+
+          if (cartao.tipo !== "terceiro") {
+            const pago = totalPagoFaturaPropria(dados, cartao.id, mes);
+            if (somentePagas && pago <= 0) return null;
+            const valor = somentePagas ? pago : total;
+            const meta = somentePagas
+              ? `Seu cartão · fatura ${formatarMoeda(total)}`
+              : `Seu cartão · pago ${formatarMoeda(pago)}`;
+            return itemDetalhe(cartao.nome || "Cartão", valor, meta, "despesa");
+          }
+
+          const pessoa = cartao.titular || "Outra pessoa";
+          const pagosDiretos = acertosPessoas
+            .filter((acerto) => acerto.mesReferencia === mes && acerto.cartaoId === cartao.id)
+            .reduce((soma, acerto) => soma + (Number(acerto.valor) || 0), 0);
+          const pagoLegado = totalPagoLegadoFatura(dados, cartao.id, mes);
+          const pagoIdentificado = Math.min(total, Math.max(pagosDiretos, pagoLegado));
+          if (somentePagas && pagoIdentificado <= 0) return null;
+          const valor = somentePagas ? pagoIdentificado : total;
+          const meta = somentePagas
+            ? `Cartão de ${pessoa} · fatura ${formatarMoeda(total)}`
+            : `Cartão de ${pessoa}`;
+          return itemDetalhe(cartao.nome || "Cartão", valor, meta, "despesa");
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.descricao.localeCompare(b.descricao));
+    }
+
+    function pagamentosPessoasDetalhados(mes) {
+      return nomesPessoasDoMes(dadosFinanceiros(), mes)
+        .map((pessoa) => {
+          const resumo = resumoPessoaMes(dadosFinanceiros(), pessoa, mes);
+          if (resumo.jaPago <= 0) return null;
+          return itemDetalhe(
+            `Acerto com ${pessoa}`,
+            resumo.jaPago,
+            `Total do mês ${formatarMoeda(resumo.totalMes)} · falta ${formatarMoeda(resumo.restante)}`,
+            "despesa"
+          );
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.descricao.localeCompare(b.descricao));
+    }
+
+    function composicaoAcertosDetalhada(mes) {
+      const dados = dadosFinanceiros();
+      const itens = [];
+
+      cartoes.filter((cartao) => cartao.tipo === "terceiro").forEach((cartao) => {
+        const total = totalFaturaCartao(dados, cartao.id, mes);
+        if (total <= 0) return;
+        itens.push(itemDetalhe(
+          cartao.nome || "Cartão",
+          total,
+          `Fatura do cartão de ${cartao.titular || "Outra pessoa"}`,
+          "despesa"
+        ));
+      });
+
+      despesas
+        .filter((despesa) => (despesa.data || "").slice(0, 7) === mes && String(despesa.pessoaRelacionada || "").trim())
+        .forEach((despesa) => itens.push(itemDetalhe(
+          despesa.descricao || "Despesa",
+          despesa.valor,
+          `Despesa vinculada a ${despesa.pessoaRelacionada}`,
+          "despesa"
+        )));
+
+      return itens.sort((a, b) => a.meta.localeCompare(b.meta) || a.descricao.localeCompare(b.descricao));
+    }
+
+    function itensAPagarDetalhados(mes) {
+      const dados = dadosFinanceiros();
+      const itens = [];
+
+      despesas
+        .filter((despesa) => (despesa.data || "").slice(0, 7) === mes)
+        .filter((despesa) => !String(despesa.pessoaRelacionada || "").trim())
+        .filter((despesa) => despesa.status !== "pago")
+        .forEach((despesa) => itens.push(itemDetalhe(
+          despesa.descricao || "Despesa",
+          despesa.valor,
+          [despesa.categoria || "Despesa", despesa.data ? formatarData(despesa.data) : ""].filter(Boolean).join(" · "),
+          "despesa"
+        )));
+
+      cartoes.filter((cartao) => cartao.tipo !== "terceiro").forEach((cartao) => {
+        const restante = restanteFaturaPropria(dados, cartao.id, mes);
+        if (restante <= 0) return;
+        itens.push(itemDetalhe(cartao.nome || "Cartão", restante, "Restante da fatura do seu cartão", "despesa"));
+      });
+
+      nomesPessoasDoMes(dados, mes).forEach((pessoa) => {
+        const resumo = resumoPessoaMes(dados, pessoa, mes);
+        if (resumo.restante <= 0) return;
+        itens.push(itemDetalhe(`Acerto com ${pessoa}`, resumo.restante, `Total do mês ${formatarMoeda(resumo.totalMes)}`, "despesa"));
+      });
+
+      return itens.sort((a, b) => a.descricao.localeCompare(b.descricao));
+    }
+
+    function itensVencidosDetalhados(mes) {
+      const vencidas = detalhesVencidos(mes);
+      const dados = dadosFinanceiros();
+      const itens = vencidas.despesasVencidas.map((despesa) => itemDetalhe(
+        despesa.descricao || "Despesa",
+        despesa.valor,
+        despesa.data ? `Venceu em ${formatarData(despesa.data)}` : "Despesa vencida",
+        "despesa"
+      ));
+
+      vencidas.faturasVencidas.forEach((cartao) => {
+        const valor = cartao.tipo === "terceiro"
+          ? resumoPessoaMes(dados, cartao.titular || "Outra pessoa", mes).restante
+          : restanteFaturaPropria(dados, cartao.id, mes);
+        itens.push(itemDetalhe(
+          cartao.nome || "Cartão",
+          valor,
+          cartao.diaVencimento ? `Venceu em ${formatarData(dataIsoSegura(mes, cartao.diaVencimento))}` : "Fatura vencida",
+          "despesa"
+        ));
+      });
+      return itens;
+    }
+
+    let resumoDashboardAtivo = null;
+
+    function destacarResumoDashboard(elemento) {
+      document.querySelectorAll(".dashboard-resumo--ativo").forEach((item) => item.classList.remove("dashboard-resumo--ativo"));
+      elemento?.classList.add("dashboard-resumo--ativo");
+      resumoDashboardAtivo = elemento || null;
+    }
+
+    function limparDestaqueResumoDashboard() {
+      resumoDashboardAtivo?.classList.remove("dashboard-resumo--ativo");
+      resumoDashboardAtivo = null;
+    }
+
+    function abrirResumoDashboard(tipo, elementoAtivo) {
       const mes = mesAtual();
       const resumo = resumoFinanceiroMes(dadosFinanceiros(), mes);
       const [ano, numeroMes] = mes.split("-").map(Number);
@@ -409,6 +626,9 @@
       let valorPrincipal = "";
       let linhas = "";
       let observacao = "";
+      let detalhesHtml = "";
+
+      destacarResumoDashboard(elementoAtivo);
 
       if (tipo === "saldo") {
         titulo = "Saldo disponível";
@@ -420,6 +640,15 @@
         if (resumo.retiradoMetas > 0) linhas += linhaResumo("Retirado de metas", resumo.retiradoMetas);
         linhas += linhaResumo("Disponível agora", resumo.saldoDisponivel, { destaque: true, tipo: resumo.saldoDisponivel >= 0 ? "receita" : "despesa" });
         observacao = "Valores reservados em metas continuam sendo seus, mas deixam de compor o saldo livre para uso.";
+        detalhesHtml += secaoDetalhes("O que entrou", [
+          ...recebimentosRegularesDetalhados(mes, true),
+          ...recebimentosDePessoasDetalhados(mes)
+        ], "Nenhuma entrada recebida neste mês.");
+        detalhesHtml += secaoDetalhes("O que já saiu", [
+          ...despesasComunsDetalhadas(mes, true),
+          ...faturasDetalhadas(mes, { apenasProprios: true, somentePagas: true }),
+          ...pagamentosPessoasDetalhados(mes)
+        ], "Nenhum pagamento registrado neste mês.");
       } else if (tipo === "recebido") {
         titulo = "Recebido este mês";
         valorPrincipal = formatarMoeda(resumo.receitasRecebidas);
@@ -427,6 +656,10 @@
         if (resumo.receitasRecebidasPessoas > 0) linhas += linhaResumo("Recebido de pessoas", resumo.receitasRecebidasPessoas, { tipo: "receita" });
         linhas += linhaResumo("Total recebido", resumo.receitasRecebidas, { destaque: true, tipo: "receita" });
         linhas += linhaResumo("Previsto em receitas cadastradas", resumo.receitasPrevistas);
+        detalhesHtml += secaoDetalhes("Receitas recebidas", recebimentosRegularesDetalhados(mes, true), "Nenhuma receita cadastrada foi recebida neste mês.");
+        if (resumo.receitasRecebidasPessoas > 0) {
+          detalhesHtml += secaoDetalhes("Recebido de pessoas", recebimentosDePessoasDetalhados(mes), "Nenhum valor de pessoa foi recebido neste mês.");
+        }
       } else if (tipo === "pago") {
         const partes = decomporPagamentosMes(mes);
         titulo = "Pago este mês";
@@ -436,6 +669,13 @@
         linhas += linhaResumo("Acertos com pessoas", partes.acertos, { tipo: "despesa" });
         linhas += linhaResumo("Total pago", partes.total, { destaque: true, tipo: "despesa" });
         observacao = "Acertos com pessoas não são somados novamente como despesa: eles representam o pagamento de valores já contabilizados.";
+        detalhesHtml += secaoDetalhes("Despesas pagas", despesasComunsDetalhadas(mes, true), "Nenhuma despesa comum foi paga neste mês.");
+        detalhesHtml += secaoDetalhes("Cartões próprios pagos", faturasDetalhadas(mes, { apenasProprios: true, somentePagas: true }), "Nenhum pagamento de cartão próprio neste mês.");
+        detalhesHtml += secaoDetalhes("Pagamentos a pessoas", pagamentosPessoasDetalhados(mes), "Nenhum acerto com pessoas neste mês.");
+        const composicaoPessoas = composicaoAcertosDetalhada(mes);
+        if (composicaoPessoas.length) {
+          detalhesHtml += secaoDetalhes("O que compõe os acertos com pessoas", composicaoPessoas);
+        }
       } else if (tipo === "total") {
         titulo = "Total do mês";
         valorPrincipal = formatarMoeda(resumo.totalComprometido);
@@ -444,6 +684,15 @@
         linhas += linhaResumo("Total comprometido", resumo.totalComprometido, { destaque: true });
         linhas += linhaResumo("Já pago", resumo.pago);
         linhas += linhaResumo("Ainda a pagar", resumo.aPagar);
+        detalhesHtml += secaoDetalhes("Despesas do mês", despesas
+          .filter((despesa) => (despesa.data || "").slice(0, 7) === mes)
+          .map((despesa) => itemDetalhe(
+            despesa.descricao || "Despesa",
+            despesa.valor,
+            [despesa.categoria || "Despesa", despesa.status === "pago" ? "Pago" : "Pendente", despesa.pessoaRelacionada ? `para ${despesa.pessoaRelacionada}` : ""].filter(Boolean).join(" · "),
+            "despesa"
+          )), "Nenhuma despesa cadastrada neste mês.");
+        detalhesHtml += secaoDetalhes("Faturas por cartão", faturasDetalhadas(mes), "Nenhuma fatura neste mês.");
       } else if (tipo === "a-receber") {
         const quantidade = receitas.filter((receita) => (receita.data || "").slice(0, 7) === mes && receita.status !== "recebido").length;
         titulo = "A receber";
@@ -452,12 +701,16 @@
         linhas += linhaResumo("Já recebidas", resumo.receitasRegularesRecebidas, { tipo: "receita" });
         linhas += linhaResumo("Ainda a receber", resumo.aReceber, { destaque: true, tipo: "receita" });
         observacao = `${quantidade} ${quantidade === 1 ? "receita cadastrada ainda está pendente" : "receitas cadastradas ainda estão pendentes"} neste mês.`;
+        detalhesHtml += secaoDetalhes("Receitas pendentes", recebimentosRegularesDetalhados(mes, false), "Nenhuma receita pendente neste mês.");
       } else if (tipo === "a-pagar") {
         titulo = "A pagar";
         valorPrincipal = formatarMoeda(resumo.aPagar);
         linhas += linhaResumo("Total comprometido", resumo.totalComprometido);
         linhas += linhaResumo("Já pago", resumo.pago, { tipo: "despesa" });
         linhas += linhaResumo("Ainda a pagar", resumo.aPagar, { destaque: true, tipo: "despesa" });
+        detalhesHtml += secaoDetalhes("O que ainda falta pagar", itensAPagarDetalhados(mes), "Nenhum valor pendente neste mês.");
+        const faturasReferencia = faturasDetalhadas(mes);
+        if (faturasReferencia.length) detalhesHtml += secaoDetalhes("Faturas do mês", faturasReferencia);
       } else if (tipo === "previsto") {
         titulo = "Resultado previsto";
         valorPrincipal = formatarMoeda(resumo.resultadoPrevisto);
@@ -465,6 +718,10 @@
         linhas += linhaResumo("Compromissos do mês", resumo.totalComprometido, { tipo: "despesa" });
         linhas += linhaResumo("Resultado previsto", resumo.resultadoPrevisto, { destaque: true, tipo: resumo.resultadoPrevisto >= 0 ? "receita" : "despesa" });
         observacao = "É uma projeção do mês completo; não representa necessariamente o dinheiro disponível hoje.";
+        detalhesHtml += secaoDetalhes("Receitas previstas", receitas
+          .filter((receita) => (receita.data || "").slice(0, 7) === mes)
+          .map((receita) => itemDetalhe(receita.descricao || "Receita", receita.valor, receita.status === "recebido" ? "Recebido" : "Pendente", "receita")), "Nenhuma receita prevista neste mês.");
+        detalhesHtml += secaoDetalhes("Faturas por cartão", faturasDetalhadas(mes), "Nenhuma fatura neste mês.");
       } else if (tipo === "vencidas") {
         const vencidas = detalhesVencidos(mes);
         const total = vencidas.despesasVencidas.length + vencidas.faturasVencidas.length;
@@ -474,6 +731,7 @@
         linhas += linhaResumo("Faturas vencidas", String(vencidas.faturasVencidas.length));
         linhas += linhaResumo("Total de pendências", String(total), { destaque: true });
         observacao = total ? "São compromissos com vencimento anterior a hoje que ainda não constam como quitados." : "Nenhuma pendência vencida neste mês.";
+        detalhesHtml += secaoDetalhes("Itens vencidos", itensVencidosDetalhados(mes), "Nenhuma pendência vencida neste mês.");
       }
 
       abrirModal(`
@@ -488,12 +746,13 @@
           <strong class="dashboard-modal__valor numero">${escapeHtml(valorPrincipal)}</strong>
           <div class="dashboard-modal__linhas">${linhas}</div>
           ${observacao ? `<p class="dashboard-modal__observacao">${escapeHtml(observacao)}</p>` : ""}
+          ${detalhesHtml ? `<div class="dashboard-modal__detalhamento">${detalhesHtml}</div>` : ""}
         </div>
-      `);
+      `, { aoFechar: limparDestaqueResumoDashboard });
     }
 
     document.querySelectorAll("[data-resumo-dashboard]").forEach((elemento) => {
-      const abrir = () => abrirResumoDashboard(elemento.dataset.resumoDashboard);
+      const abrir = () => abrirResumoDashboard(elemento.dataset.resumoDashboard, elemento);
       elemento.addEventListener("click", abrir);
       elemento.addEventListener("keydown", (evento) => {
         if (evento.key === "Enter" || evento.key === " ") {
