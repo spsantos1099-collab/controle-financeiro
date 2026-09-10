@@ -6,6 +6,35 @@
 
 import { observarUsuario, sair, buscarUmaVez } from "./firebase.js";
 
+function nomeCompletoPerfil(perfil, usuario) {
+  const nomeExibicao = String(perfil?.nomeExibicao || "").trim();
+  if (nomeExibicao) return nomeExibicao;
+  const nomeCompleto = [perfil?.nome, perfil?.sobrenome].filter(Boolean).join(" ").trim();
+  return nomeCompleto || usuario?.displayName || usuario?.email || "Minha conta";
+}
+
+function iniciaisPerfil(perfil, usuario) {
+  const nome = nomeCompletoPerfil(perfil, usuario);
+  const partes = nome.split(/\s+/).filter(Boolean);
+  return (partes.length > 1 ? `${partes[0][0]}${partes[partes.length - 1][0]}` : nome.slice(0, 2)).toUpperCase();
+}
+
+async function carregarIdentidadeDoPerfil(usuario) {
+  if (!usuario) return;
+  let perfil = {};
+  try {
+    perfil = await buscarUmaVez(usuario.uid, "perfil/principal");
+  } catch (_) {}
+
+  const resumo = nomeCompletoPerfil(perfil, usuario);
+  document.querySelectorAll("[data-usuario-resumo]").forEach((elemento) => {
+    elemento.textContent = resumo;
+  });
+  document.querySelectorAll("[data-usuario-iniciais]").forEach((elemento) => {
+    elemento.textContent = iniciaisPerfil(perfil, usuario);
+  });
+}
+
 async function sincronizarTemaDoPerfil(usuario) {
   if (!usuario || !window.ControleTema) return;
 
@@ -35,8 +64,12 @@ function protegerPaginaSeNecessario() {
     document.querySelectorAll("[data-usuario-email]").forEach((elemento) => {
       elemento.textContent = usuario.email || "";
     });
+    document.querySelectorAll("[data-usuario-resumo]").forEach((elemento) => {
+      elemento.textContent = usuario.displayName || usuario.email || "Minha conta";
+    });
 
     sincronizarTemaDoPerfil(usuario);
+    carregarIdentidadeDoPerfil(usuario);
   });
 
   const botaoSair = document.querySelector("[data-sair]");

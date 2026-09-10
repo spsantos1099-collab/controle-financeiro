@@ -14,7 +14,7 @@
     <div class="topo-app">
       <h1 class="topo-app__titulo" style="border:none; margin:0; padding:0;">Cartões</h1>
       <div class="topo-app__usuario">
-        <span>Logado como <strong data-usuario-email style="color: var(--cor-texto);"></strong></span>
+        <span><strong data-usuario-resumo></strong></span>
         <button data-sair class="botao-sair" type="button">Sair</button>
       </div>
     </div>
@@ -118,7 +118,7 @@
 
     import {
       formatarMoeda, formatarData, formatarMesAno,
-      paraLista, somarMeses, mesAtual, hojeIso, dataIsoSegura
+      paraLista, somarMeses, mesAtual, hojeIso, dataIsoSegura, iconeSvg
     } from "../js/utils.js";
 
     import {
@@ -299,7 +299,7 @@
                       <span class="acerto-pagamento__importado" title="Valor preservado automaticamente a partir do histórico anterior">Histórico anterior</span>
                     ` : ""}
                     <button class="botao-icone botao-icone--perigo" type="button"
-                            title="Excluir pagamento" data-acao="excluir-acerto" data-id="${pagamento.id}">🗑️</button>
+                            title="Excluir pagamento" data-acao="excluir-acerto" data-id="${pagamento.id}">${iconeSvg("excluir")}</button>
                   </div>
                 </div>
               `).join("")}
@@ -461,7 +461,7 @@
                   <span>${pagamento.data ? formatarData(pagamento.data) : "Pagamento anterior"}${pagamento.observacoes ? ` · ${escaparHtml(pagamento.observacoes)}` : ""}</span>
                 </div>
                 <button class="botao-icone botao-icone--perigo" type="button"
-                        title="Excluir pagamento" data-acao="excluir-pagamento-fatura" data-id="${pagamento.id}">🗑️</button>
+                        title="Excluir pagamento" data-acao="excluir-pagamento-fatura" data-id="${pagamento.id}">${iconeSvg("excluir")}</button>
               </div>
             `).join("")}
           </div>
@@ -475,9 +475,9 @@
             </div>
             <div class="fatura-manual__acoes">
               <button class="botao-icone" type="button" title="Editar total da fatura"
-                      data-acao="informar-fatura" data-cartao="${cartao.id}">✏️</button>
+                      data-acao="informar-fatura" data-cartao="${cartao.id}">${iconeSvg("editar")}</button>
               <button class="botao-icone botao-icone--perigo" type="button" title="Remover total informado"
-                      data-acao="excluir-fatura-manual" data-id="${faturaManual.id}">🗑️</button>
+                      data-acao="excluir-fatura-manual" data-id="${faturaManual.id}">${iconeSvg("excluir")}</button>
             </div>
           </div>
         ` : "";
@@ -490,7 +490,7 @@
                   <div class="linha-parcela__categoria">${escaparHtml(p.categoria || "Sem categoria")}</div>
                 </div>
                 <span class="chip-parcela ${p.recorrente ? "chip-parcela--assinatura" : ""}">
-                  ${p.recorrente ? "↻ assinatura" : `${p.numero}/${p.totalParcelas}`}
+                  ${p.recorrente ? "Assinatura" : `${p.numero}/${p.totalParcelas}`}
                 </span>
                 <div class="linha-parcela__valor numero">${formatarMoeda(p.valor)}</div>
                 <div class="linha-parcela__acoes">
@@ -503,7 +503,7 @@
                   <button class="botao-icone botao-icone--perigo"
                           title="Remover somente desta fatura"
                           aria-label="Remover ${escaparHtml(p.descricao || "lançamento")} somente desta fatura"
-                          data-acao="excluir-parcela-fatura" data-id="${p.id}" type="button">🗑️</button>
+                          data-acao="excluir-parcela-fatura" data-id="${p.id}" type="button">${iconeSvg("excluir")}</button>
                 </div>
               </div>
             `).join("")
@@ -591,7 +591,7 @@
         const quantidade = Number(compra.quantidadeParcelas) || 1;
 
         const chip = compra.recorrente
-          ? `<span class="chip-parcela chip-parcela--assinatura">↻ Mensal</span>`
+          ? `<span class="chip-parcela chip-parcela--assinatura">Mensal</span>`
           : `<span class="chip-parcela">${quantidade}x</span>`;
 
         const canceladaEm = compra.recorrente && compra.dataFim
@@ -614,10 +614,10 @@
               ${formatarMoeda(compra.valorTotal)}${compra.recorrente ? "<span class=\"linha-registro__por-mes\">/mês</span>" : ""}
             </div>
             <div class="linha-registro__acoes">
-              <button class="botao-icone" title="Editar" data-acao="editar-compra" data-id="${compra.id}">✏️</button>
+              <button class="botao-icone" title="Editar" data-acao="editar-compra" data-id="${compra.id}">${iconeSvg("editar")}</button>
               <button class="botao-icone" title="Duplicar" data-acao="duplicar-compra" data-id="${compra.id}">⧉</button>
-              ${podeCancelar ? `<button class="botao-icone" title="Cancelar assinatura" data-acao="cancelar-assinatura" data-id="${compra.id}">🚫</button>` : ""}
-              <button class="botao-icone botao-icone--perigo" title="Excluir" data-acao="excluir-compra" data-id="${compra.id}">🗑️</button>
+              ${podeCancelar ? `<button class="botao-icone" title="Cancelar assinatura" data-acao="cancelar-assinatura" data-id="${compra.id}">${iconeSvg("cancelar")}</button>` : ""}
+              <button class="botao-icone botao-icone--perigo" title="Excluir" data-acao="excluir-compra" data-id="${compra.id}">${iconeSvg("excluir")}</button>
             </div>
           </div>
         `;

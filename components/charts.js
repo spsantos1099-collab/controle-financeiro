@@ -126,3 +126,75 @@ export function criarGraficoDonut(container, dados) {
     </div>
   `;
 }
+
+/* --------------------------------------------------------------------
+   GRÁFICO DE LINHA — duas séries mensais
+   dados: [{ label: "Jan", receita: 1200, despesa: 900 }, ...]
+   -------------------------------------------------------------------- */
+export function criarGraficoLinha(container, dados) {
+  if (!dados.length || dados.every((d) => Number(d.receita || 0) === 0 && Number(d.despesa || 0) === 0)) {
+    container.innerHTML = '<p class="grafico-vazio">Sem movimentação suficiente para o período.</p>';
+    return;
+  }
+
+  const largura = 760;
+  const altura = 250;
+  const margem = { topo: 18, direita: 18, baixo: 34, esquerda: 18 };
+  const larguraUtil = largura - margem.esquerda - margem.direita;
+  const alturaUtil = altura - margem.topo - margem.baixo;
+  const maior = Math.max(...dados.flatMap((d) => [Number(d.receita) || 0, Number(d.despesa) || 0]), 1);
+  const passoX = dados.length > 1 ? larguraUtil / (dados.length - 1) : 0;
+
+  function pontos(campo) {
+    return dados.map((item, indice) => {
+      const x = margem.esquerda + (dados.length === 1 ? larguraUtil / 2 : indice * passoX);
+      const y = margem.topo + alturaUtil - ((Number(item[campo]) || 0) / maior) * alturaUtil;
+      return { x, y, valor: Number(item[campo]) || 0, label: item.label };
+    });
+  }
+
+  function polyline(lista, cor, nome) {
+    const linha = lista.map((p) => `${p.x},${p.y}`).join(" ");
+    const circulos = lista.map((p) => `
+      <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${cor}">
+        <title>${nome} ${p.label}: ${formatarMoeda(p.valor)}</title>
+      </circle>`).join("");
+    return `<polyline points="${linha}" fill="none" stroke="${cor}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>${circulos}`;
+  }
+
+  const entradas = pontos("receita");
+  const saidas = pontos("despesa");
+  const labels = dados.map((item, indice) => {
+    const x = margem.esquerda + (dados.length === 1 ? larguraUtil / 2 : indice * passoX);
+    return `<text x="${x}" y="${altura - 8}" text-anchor="middle" fill="var(--cor-texto-suave)" font-size="10">${item.label}</text>`;
+  }).join("");
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${largura} ${altura}" width="100%" role="img" aria-label="Evolução de entradas e gastos no período">
+      <line x1="${margem.esquerda}" y1="${margem.topo + alturaUtil}" x2="${largura - margem.direita}" y2="${margem.topo + alturaUtil}" stroke="var(--cor-borda)"/>
+      ${polyline(entradas, "var(--cor-receita)", "Entradas")}
+      ${polyline(saidas, "var(--cor-despesa)", "Gastos")}
+      ${labels}
+    </svg>`;
+}
+
+/* --------------------------------------------------------------------
+   BARRAS HORIZONTAIS — ranking por categoria
+   -------------------------------------------------------------------- */
+export function criarGraficoBarrasHorizontais(container, dados, { limite = 8, tipo = "despesa" } = {}) {
+  const lista = dados.filter((item) => Number(item.valor) > 0).slice(0, limite);
+  if (!lista.length) {
+    container.innerHTML = '<p class="grafico-vazio">Sem categorias para mostrar neste período.</p>';
+    return;
+  }
+  const maior = Math.max(...lista.map((item) => Number(item.valor) || 0), 1);
+  const cor = tipo === "receita" ? "var(--cor-receita)" : "var(--cor-despesa)";
+  container.innerHTML = `<div class="grafico-ranking">${lista.map((item) => {
+    const percentual = Math.max(2, ((Number(item.valor) || 0) / maior) * 100);
+    return `
+      <div class="grafico-ranking__item">
+        <div class="grafico-ranking__rotulo"><span>${item.label}</span><strong class="numero">${formatarMoeda(item.valor)}</strong></div>
+        <div class="grafico-ranking__trilho"><i style="width:${percentual}%;background:${cor}"></i></div>
+      </div>`;
+  }).join("")}</div>`;
+}

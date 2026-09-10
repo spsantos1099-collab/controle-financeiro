@@ -129,3 +129,17 @@ export function hojeIso() {
   const agora = new Date();
   return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
 }
+
+// Ícones vetoriais simples para ações recorrentes. Mantém a interface sóbria
+// sem depender de emojis, fontes de ícones ou bibliotecas externas.
+export function iconeSvg(nome, tamanho = 16) {
+  const base = `viewBox="0 0 24 24" width="${tamanho}" height="${tamanho}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"`;
+  const caminhos = {
+    editar: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+    excluir: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/>',
+    duplicar: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
+    usuario: '<circle cx="12" cy="8" r="3"/><path d="M5 20c.8-4 3-6 7-6s6.2 2 7 6"/>',
+    cancelar: '<circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 7 7"/>'
+  };
+  return caminhos[nome] ? `<svg ${base}>${caminhos[nome]}</svg>` : "";
+}

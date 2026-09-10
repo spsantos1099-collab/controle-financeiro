@@ -14,8 +14,10 @@ Concluídas até aqui:
 6. Despesas
 7. Cartões, faturas, parcelamento e assinaturas
 8. Calendário financeiro
+9. Metas financeiras
+10. Relatórios
 
-Além da Etapa 8, esta versão contém uma revisão de usabilidade do Dashboard, Cartões, pagamentos e tema.
+Além dessas etapas, esta versão contém uma revisão de usabilidade do Dashboard, Cartões, pagamentos, tema e perfil.
 
 ## Estrutura
 
@@ -34,6 +36,8 @@ controle-financeiro/
 │   └── utils.js
 ├── components/
 │   ├── calendario.js
+│   ├── metas.js
+│   ├── relatorios.js
 │   ├── cards.js
 │   ├── cartoes.js
 │   ├── charts.js
@@ -70,6 +74,8 @@ Coleções/áreas utilizadas atualmente:
 - `acertosPessoas`
 - `pagamentosFaturas`
 - `configuracoes/preferencias`
+- `perfil/principal`
+- `metas`
 
 ## Regra financeira do Dashboard
 
@@ -124,3 +130,16 @@ A preferência é salva localmente e em `configuracoes/preferencias`. O arquivo 
 ## Publicação
 
 O projeto não tem etapa de build. No GitHub, `index.html`, `css/`, `js/`, `components/` e `pages/` devem permanecer na raiz do repositório. Na Netlify, o diretório de publicação é a raiz (`.` ou vazio, conforme a interface).
+
+
+## Metas
+
+A área de Metas permite criar objetivos, informar valor inicial, prazo opcional, registrar aportes ou retiradas e acompanhar percentual, valor restante e previsão de conclusão baseada no histórico de aportes.
+
+## Relatórios
+
+A área de Relatórios permite selecionar um período, comparar meses e anos, analisar categorias, maiores receitas/gastos e exportar os lançamentos em CSV, Excel (.xls) ou usar a impressão do navegador para salvar em PDF.
+
+## Perfil
+
+Em Configurações, o usuário pode informar nome, sobrenome e nome de exibição. O sistema usa essa identidade no cabeçalho das páginas. Quando a conta Google possui foto de perfil, ela é usada na área de configurações; caso contrário, são exibidas iniciais.

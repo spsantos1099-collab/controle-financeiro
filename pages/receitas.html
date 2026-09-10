@@ -14,7 +14,7 @@
     <div class="topo-app">
       <h1 class="topo-app__titulo" style="border:none; margin:0; padding:0;">Receitas</h1>
       <div class="topo-app__usuario">
-        <span>Logado como <strong data-usuario-email style="color: var(--cor-texto);"></strong></span>
+        <span><strong data-usuario-resumo></strong></span>
         <button data-sair class="botao-sair" type="button">Sair</button>
       </div>
     </div>
@@ -56,7 +56,7 @@
 
   <script type="module">
     import { observarUsuario, observarLista, adicionarRegistro, atualizarRegistro, removerRegistro } from "../js/firebase.js";
-    import { formatarMoeda, formatarData, paraLista } from "../js/utils.js";
+    import { formatarMoeda, formatarData, paraLista, iconeSvg } from "../js/utils.js";
     import { CATEGORIAS_RECEITA_PADRAO } from "../js/config.js";
     import { abrirModal, fecharModal, confirmarExclusao } from "../components/modal.js";
     import { mostrarToast } from "../js/app.js";
@@ -114,9 +114,9 @@
           <div><span class="badge-status badge-status--${r.status}">${rotuloStatus(r.status)}</span></div>
           <div class="linha-registro__valor numero" style="color: var(--cor-receita)">${formatarMoeda(r.valor)}</div>
           <div class="linha-registro__acoes">
-            <button class="botao-icone" title="Editar" data-acao="editar" data-id="${r.id}">✏️</button>
+            <button class="botao-icone" title="Editar" data-acao="editar" data-id="${r.id}">${iconeSvg("editar")}</button>
             <button class="botao-icone" title="Duplicar" data-acao="duplicar" data-id="${r.id}">⧉</button>
-            <button class="botao-icone botao-icone--perigo" title="Excluir" data-acao="excluir" data-id="${r.id}">🗑️</button>
+            <button class="botao-icone botao-icone--perigo" title="Excluir" data-acao="excluir" data-id="${r.id}">${iconeSvg("excluir")}</button>
           </div>
         </div>
       `).join("");

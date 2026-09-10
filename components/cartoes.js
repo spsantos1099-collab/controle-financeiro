@@ -54,7 +54,8 @@ import {
   formatarMoeda,
   calcularParcelas,
   somarMeses,
-  dataIsoSegura
+  dataIsoSegura,
+  iconeSvg
 } from "../js/utils.js";
 
 /* --------------------------------------------------------------------
@@ -332,7 +333,7 @@ export function renderizarCartaoVisual(cartao, resumo, opcoes = {}) {
         <div class="cartao-visual__topo">
           <span class="cartao-visual__banco">${identificacao}</span>
           <span class="cartao-visual__bandeira">
-            ${terceiro ? "👤 De terceiro" : (cartao.bandeira || "")}
+            ${terceiro ? `${iconeSvg("usuario", 13)} De terceiro` : (cartao.bandeira || "")}
           </span>
         </div>
 
@@ -353,9 +354,9 @@ export function renderizarCartaoVisual(cartao, resumo, opcoes = {}) {
         ${blocoLimite}
         <div class="cartao-acoes">
           <button class="botao-icone" title="Editar cartão"
-                  data-acao="editar-cartao" data-id="${cartao.id}">✏️</button>
+                  data-acao="editar-cartao" data-id="${cartao.id}">${iconeSvg("editar")}</button>
           <button class="botao-icone botao-icone--perigo" title="Excluir cartão"
-                  data-acao="excluir-cartao" data-id="${cartao.id}">🗑️</button>
+                  data-acao="excluir-cartao" data-id="${cartao.id}">${iconeSvg("excluir")}</button>
         </div>
       </div>
     </article>
