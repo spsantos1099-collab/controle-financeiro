@@ -3694,3 +3694,21 @@ html[data-tema="escuro"] .menu-conta__painel {
   .menu-conta__gatilho strong { font-size: 12px; }
   .menu-conta__painel { right: 0; }
 }
+
+/* Ícones de navegação Fluxo — família v3 */
+.nav-icone .nav-acento {
+  fill: var(--cor-primaria);
+  stroke: none;
+  opacity: .78;
+}
+.nav-icone .nav-acento--suave { opacity: .2; }
+.nav-icone .nav-acento-stroke {
+  fill: color-mix(in srgb, var(--cor-primaria) 18%, transparent);
+  stroke: var(--cor-primaria);
+}
+.nav-paginas > a:not(.ativa) .nav-acento { opacity: .28; }
+.nav-paginas > a:not(.ativa) .nav-acento--suave { opacity: .12; }
+.nav-paginas > a:not(.ativa) .nav-acento-stroke {
+  fill: transparent;
+  stroke: currentColor;
+}
