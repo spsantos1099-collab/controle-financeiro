@@ -49,6 +49,23 @@ async function sincronizarTemaDoPerfil(usuario) {
   }
 }
 
+
+function inserirMarcaSistema() {
+  const main = document.querySelector("main");
+  const topo = main?.querySelector(".topo-app");
+  if (!main || !topo || main.querySelector(".marca-sistema")) return;
+
+  const raiz = document.body.dataset.raiz || "";
+  const marca = document.createElement("a");
+  marca.className = "marca-sistema";
+  marca.href = `${raiz}pages/dashboard.html`;
+  marca.setAttribute("aria-label", "Fluxo — Controle financeiro pessoal");
+  marca.innerHTML = `
+    <img src="${raiz}assets/fluxo-icon.png" alt="">
+    <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>`;
+  main.insertBefore(marca, topo);
+}
+
 function protegerPaginaSeNecessario() {
   const paginaProtegida = document.body.dataset.protegida === "true";
   if (!paginaProtegida) return;
@@ -82,6 +99,7 @@ function protegerPaginaSeNecessario() {
 }
 
 function iniciarAplicacao() {
+  inserirMarcaSistema();
   protegerPaginaSeNecessario();
   document.documentElement.classList.add("app-iniciada");
 }

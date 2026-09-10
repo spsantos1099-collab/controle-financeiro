@@ -3,8 +3,7 @@
    Configurações gerais do sistema que NÃO são segredo (podem ficar
    públicas no código). As chaves do Firebase entram aqui também — chaves
    de projeto Firebase para apps web são públicas por natureza, a
-   segurança real vem das REGRAS do Firestore, que vamos configurar na
-   Etapa 2 (Firebase).
+   segurança real vem das REGRAS do Realtime Database publicadas no Firebase.
    ========================================================================== */
 
 // Cole aqui o bloco "firebaseConfig" que o Firebase mostrou pra você na
@@ -33,8 +32,8 @@ export const CATEGORIAS_RECEITA_PADRAO = [
 
 // Configuração geral do app
 export const APP_CONFIG = {
-  nome: "Controle Financeiro",
+  nome: "Fluxo",
   moedaPadrao: "BRL",
   localePadrao: "pt-BR",
-  temaPadrao: "claro" // 'claro' | 'escuro'
+  temaPadrao: "sistema" // 'sistema' | 'claro' | 'escuro'
 };

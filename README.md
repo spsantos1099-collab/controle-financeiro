@@ -1,6 +1,8 @@
-# Controle Financeiro
+# Fluxo — Controle financeiro pessoal
 
-Sistema pessoal de controle financeiro feito com **HTML, CSS e JavaScript puro**, usando **Firebase Authentication + Realtime Database** e publicação pela **Netlify** a partir do GitHub.
+O **Fluxo** é um sistema pessoal de controle financeiro feito com **HTML, CSS e JavaScript puro**, usando **Firebase Authentication + Realtime Database** e publicação pela **Netlify** a partir do GitHub.
+
+A identidade "Fluxo" é a marca do app; o subtítulo **Controle financeiro pessoal** permanece visível para deixar claro o propósito do sistema.
 
 ## Estado atual
 
@@ -14,10 +16,10 @@ Concluídas até aqui:
 6. Despesas
 7. Cartões, faturas, parcelamento e assinaturas
 8. Calendário financeiro
-9. Metas financeiras
+9. Metas financeiras com planejamento mensal
 10. Relatórios
-
-Além dessas etapas, esta versão contém uma revisão de usabilidade do Dashboard, Cartões, pagamentos, tema e perfil.
+11. Perfil e aparência
+12. Controle de valores que outras pessoas devem ao usuário
 
 ## Estrutura
 
@@ -25,6 +27,15 @@ Além dessas etapas, esta versão contém uma revisão de usabilidade do Dashboa
 controle-financeiro/
 ├── index.html
 ├── database.rules.json
+├── assets/
+│   ├── fluxo-logo.png
+│   ├── fluxo-icon.png
+│   ├── favicon.ico
+│   ├── favicon-32.png
+│   ├── favicon-48.png
+│   ├── apple-touch-icon.png
+│   ├── icon-192.png
+│   └── icon-512.png
 ├── css/
 │   └── style.css
 ├── js/
@@ -37,6 +48,7 @@ controle-financeiro/
 ├── components/
 │   ├── calendario.js
 │   ├── metas.js
+│   ├── recebiveis.js
 │   ├── relatorios.js
 │   ├── cards.js
 │   ├── cartoes.js
@@ -55,15 +67,9 @@ controle-financeiro/
 
 ## Banco de dados
 
-Todos os dados ficam em:
+Todos os dados ficam em `usuarios/{uid}/...`. As regras de `database.rules.json` permitem que cada usuário autenticado leia e altere somente a própria árvore.
 
-```text
-usuarios/{uid}/...
-```
-
-As regras de `database.rules.json` permitem que cada usuário autenticado leia e altere somente a própria árvore.
-
-Coleções/áreas utilizadas atualmente:
+Áreas utilizadas atualmente:
 
 - `receitas`
 - `despesas`
@@ -73,73 +79,62 @@ Coleções/áreas utilizadas atualmente:
 - `faturasManuais`
 - `acertosPessoas`
 - `pagamentosFaturas`
+- `dividasReceber`
 - `configuracoes/preferencias`
 - `perfil/principal`
 - `metas`
 
-## Regra financeira do Dashboard
+## Regra financeira central
 
-O Dashboard usa `js/calculos.js` como fonte única de cálculo para evitar duplicidade.
+O arquivo `js/calculos.js` é a fonte única dos cálculos financeiros principais.
 
-- **Recebido este mês:** receitas do mês com status `recebido`.
-- **Pago este mês:** despesas comuns pagas + faturas próprias pagas + pagamentos/acertos com terceiros.
-- **Saldo atual:** recebido no mês − pago no mês.
-- **Despesas:** lançamentos da tela Despesas no mês.
-- **Faturas:** total oficial das faturas do mês. Se houver um total manual, ele substitui a soma das compras detalhadas daquele cartão/mês.
-- **Total do mês:** despesas + faturas.
-- **Acertos com pessoas não são uma nova despesa:** eles registram o pagamento das obrigações já contabilizadas, evitando somar o mesmo valor duas vezes.
+- **Recebido no mês:** receitas marcadas como recebidas + valores de pessoas que foram efetivamente recebidos naquele mês.
+- **Pago no mês:** despesas comuns pagas + faturas próprias pagas + pagamentos/acertos com terceiros.
+- **Total do mês:** despesas + faturas, sem contar acertos novamente.
+- **Saldo de caixa:** recebido − pago.
+- **Saldo disponível:** saldo de caixa − valores reservados em metas + valores retirados das metas.
 
-Regularizar um pagamento de um mês antigo altera aquele mês, mas não muda o “Saldo atual” do mês corrente.
+Dinheiro guardado em uma meta não é tratado como despesa. Continua sendo patrimônio, mas deixa de compor o saldo disponível.
 
-## Cartões de terceiros e acertos
+## Metas e planejamento mensal
 
-Cartões de outras pessoas são mostrados **mês a mês**, sem somar parcelas futuras ou assinaturas como se fossem uma dívida atual inteira.
+Cada meta pode ter um planejamento mensal, por exemplo:
 
-É possível:
+- Setembro: R$ 500
+- Outubro: R$ 600
+- Novembro: R$ 700
 
-- informar somente o total da fatura;
-- lançar compras detalhadas quando for útil;
-- registrar pagamento parcial;
-- marcar a fatura inteira como paga;
-- vincular despesas comuns a uma pessoa (ex.: `Energia → Mãe`);
-- visualizar o acerto mensal consolidado da pessoa;
-- registrar pagamentos parciais ou marcar todo o acerto do mês como pago.
+Planejar não altera o saldo. Ao marcar um mês como **separado**, o valor é adicionado à meta e passa a reduzir o saldo disponível daquele mês. A marcação pode ser desfeita e o planejamento pode ser editado ou excluído.
 
-O sistema preserva pagamentos antigos que já estavam marcados antes da criação do histórico de pagamentos, sem contá-los duas vezes.
+Aportes manuais também entram como valores reservados. Retiradas de uma meta devolvem dinheiro ao saldo disponível no mês da retirada.
 
-## Faturas compactas
+## Pessoas que me devem
 
-As faturas ficam recolhidas por padrão. O cabeçalho mostra o essencial; os lançamentos aparecem ao clicar em **Ver detalhes**. Para faturas muito grandes, são mostrados poucos registros por vez com **Mostrar mais**, evitando uma página interminável.
+Dentro de **Receitas** existe uma área específica para valores que outras pessoas precisam devolver.
 
-## Assinaturas
+Enquanto um registro estiver pendente, ele não entra nas receitas nem no saldo. Ao marcar como recebido, o usuário escolhe:
 
-Compras recorrentes mantêm um horizonte de cobranças futuras e usam um identificador único por assinatura/mês para evitar duplicidades. Também é possível remover somente uma cobrança mensal sem apagar toda a assinatura.
+- **Deixar no saldo disponível**; ou
+- **Enviar para uma meta**.
+
+Quando o valor é enviado para uma meta, ele conta como entrada recebida e, ao mesmo tempo, como valor reservado. Assim, o sistema não duplica o dinheiro nem aumenta artificialmente o saldo livre.
+
+## Identidade visual
+
+O app usa a marca **Fluxo** e mantém a descrição **Controle financeiro pessoal** nas áreas de identidade. A tela de login tem visual fixo verde + branco e não acompanha o tema do sistema.
+
+O favicon e os ícones do futuro PWA usam o símbolo aprovado da marca Fluxo.
 
 ## Tema e aparência
 
-A interface usa a tipografia **Geist**, com números tabulares para valores financeiros.
-
-Em **Configurações → Aparência**, o usuário escolhe:
+Nas páginas internas, o usuário pode escolher em **Configurações → Aparência**:
 
 - Claro
 - Escuro
 - Seguir sistema
 
-A preferência é salva localmente e em `configuracoes/preferencias`. O arquivo `js/theme-init.js` aplica o tema antes do CSS ser desenhado para evitar a piscada branca ao trocar de página.
+A preferência é salva localmente e no perfil. A tela de login permanece sempre verde + branca.
 
 ## Publicação
 
-O projeto não tem etapa de build. No GitHub, `index.html`, `css/`, `js/`, `components/` e `pages/` devem permanecer na raiz do repositório. Na Netlify, o diretório de publicação é a raiz (`.` ou vazio, conforme a interface).
-
-
-## Metas
-
-A área de Metas permite criar objetivos, informar valor inicial, prazo opcional, registrar aportes ou retiradas e acompanhar percentual, valor restante e previsão de conclusão baseada no histórico de aportes.
-
-## Relatórios
-
-A área de Relatórios permite selecionar um período, comparar meses e anos, analisar categorias, maiores receitas/gastos e exportar os lançamentos em CSV, Excel (.xls) ou usar a impressão do navegador para salvar em PDF.
-
-## Perfil
-
-Em Configurações, o usuário pode informar nome, sobrenome e nome de exibição. O sistema usa essa identidade no cabeçalho das páginas. Quando a conta Google possui foto de perfil, ela é usada na área de configurações; caso contrário, são exibidas iniciais.
+O projeto não tem etapa de build. No GitHub, `index.html`, `assets/`, `css/`, `js/`, `components/` e `pages/` devem permanecer na raiz do repositório. Na Netlify, o diretório de publicação é a raiz (`.` ou vazio, conforme a interface).

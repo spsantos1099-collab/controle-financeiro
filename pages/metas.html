@@ -3,16 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Metas · Controle Financeiro</title>
+  <title>Metas · Fluxo — Controle financeiro pessoal</title>
+  <link rel="icon" href="../assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
   <script src="../js/theme-init.js"></script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-protegida="true" data-raiz="../">
   <main class="container pagina-app pagina-metas">
+    <a class="marca-sistema" href="dashboard.html" aria-label="Fluxo — Controle financeiro pessoal">
+      <img src="../assets/fluxo-icon.png" alt="">
+      <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>
+    </a>
+
     <div class="topo-app">
       <div>
         <h1 class="topo-app__titulo">Metas</h1>
-        <p class="topo-app__subtitulo">Objetivos financeiros claros, sem transformar tudo em uma planilha.</p>
+        <p class="topo-app__subtitulo">Planeje quanto guardar e acompanhe o que realmente foi separado.</p>
       </div>
       <div class="topo-app__usuario">
         <span><strong data-usuario-resumo></strong></span>
@@ -42,13 +50,14 @@
   <script type="module">
     import {
       observarUsuario, observarLista, adicionarRegistro,
-      atualizarRegistro, removerRegistro
+      atualizarRegistro, removerRegistro, salvarRegistroComId
     } from "../js/firebase.js";
-    import { formatarMoeda, formatarData, paraLista, hojeIso } from "../js/utils.js";
+    import { formatarMoeda, formatarData, formatarMesAno, paraLista, hojeIso, mesAtual, iconeSvg } from "../js/utils.js";
     import { abrirModal, fecharModal, confirmarExclusao } from "../components/modal.js";
     import { mostrarToast } from "../js/app.js";
     import {
-      movimentosDaMeta, valorAtualMeta, percentualMeta,
+      movimentosDaMeta, planejamentosDaMeta, idPlanejamentoMes,
+      idMovimentoPlanejado, valorAtualMeta, percentualMeta,
       faltaMeta, previsaoMeta
     } from "../components/metas.js";
 
@@ -68,21 +77,19 @@
         .replaceAll("'", "&#039;");
     }
 
-    function svg(nome) {
-      const base = 'viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
-      if (nome === "editar") return `<svg ${base}><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>`;
-      if (nome === "excluir") return `<svg ${base}><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>`;
-      return "";
-    }
-
     function renderizarResumo() {
       const totalAlvo = metas.reduce((soma, meta) => soma + (Number(meta.valorMeta) || 0), 0);
       const totalAtual = metas.reduce((soma, meta) => soma + valorAtualMeta(meta), 0);
       const concluidas = metas.filter((meta) => faltaMeta(meta) <= 0).length;
+      const planejadoAtual = metas.reduce((soma, meta) => {
+        const plano = planejamentosDaMeta(meta).find((item) => item.mesReferencia === mesAtual() && !item.realizado);
+        return soma + (Number(plano?.valor) || 0);
+      }, 0);
 
       resumoMetas.innerHTML = `
         <div><span>Guardado</span><strong class="numero">${formatarMoeda(totalAtual)}</strong></div>
         <div><span>Objetivos</span><strong class="numero">${formatarMoeda(totalAlvo)}</strong></div>
+        <div><span>Planejado neste mês</span><strong class="numero">${formatarMoeda(planejadoAtual)}</strong></div>
         <div><span>Concluídas</span><strong>${concluidas} de ${metas.length}</strong></div>
       `;
     }
@@ -90,7 +97,7 @@
     function historicoHtml(meta) {
       const movimentos = movimentosDaMeta(meta)
         .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")) || (Number(b.createdAt) - Number(a.createdAt)))
-        .slice(0, 5);
+        .slice(0, 6);
 
       if (!movimentos.length) return "";
 
@@ -107,6 +114,40 @@
           </div>
         </details>
       `;
+    }
+
+    function planejamentoHtml(meta) {
+      const planos = planejamentosDaMeta(meta);
+      return `
+        <details class="meta-planejamento" ${planos.length ? "" : "open"}>
+          <summary>
+            <span>Planejamento mensal</span>
+            <small>${planos.length ? `${planos.length} ${planos.length === 1 ? "mês planejado" : "meses planejados"}` : "Defina quanto pretende guardar"}</small>
+          </summary>
+          <div class="meta-planejamento__conteudo">
+            ${planos.length ? `
+              <div class="meta-planejamento__lista">
+                ${planos.map((plano) => `
+                  <div class="meta-planejamento__item ${plano.realizado ? "meta-planejamento__item--realizado" : ""}">
+                    <label class="meta-planejamento__check">
+                      <input type="checkbox" data-acao="alternar-plano" data-meta="${meta.id}" data-plano="${plano.id}" ${plano.realizado ? "checked" : ""}>
+                      <span></span>
+                    </label>
+                    <div class="meta-planejamento__info">
+                      <strong>${formatarMesAno(plano.mesReferencia)}</strong>
+                      <small>${plano.realizado ? `Separado em ${formatarData(plano.realizadoEm || plano.dataRealizacao || hojeIso())}` : "Ainda não separado"}</small>
+                    </div>
+                    <strong class="numero meta-planejamento__valor">${formatarMoeda(plano.valor)}</strong>
+                    <div class="meta-planejamento__acoes">
+                      <button class="botao-icone" type="button" title="Editar planejamento" data-acao="editar-plano" data-meta="${meta.id}" data-plano="${plano.id}">${iconeSvg("editar")}</button>
+                      <button class="botao-icone botao-icone--perigo" type="button" title="Excluir planejamento" data-acao="excluir-plano" data-meta="${meta.id}" data-plano="${plano.id}">${iconeSvg("excluir")}</button>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>` : `<p class="meta-planejamento__vazio">Nenhum valor planejado ainda.</p>`}
+            <button class="botao-texto meta-planejamento__adicionar" type="button" data-acao="planejar" data-meta="${meta.id}">Planejar um mês</button>
+          </div>
+        </details>`;
     }
 
     function renderizarMetas() {
@@ -147,8 +188,8 @@
                 <p>${escaparHtml(meta.observacoes || previsao.texto)}</p>
               </div>
               <div class="meta-card__acoes">
-                <button class="botao-icone" type="button" title="Editar meta" data-acao="editar" data-id="${meta.id}">${svg("editar")}</button>
-                <button class="botao-icone botao-icone--perigo" type="button" title="Excluir meta" data-acao="excluir" data-id="${meta.id}">${svg("excluir")}</button>
+                <button class="botao-icone" type="button" title="Editar meta" data-acao="editar" data-id="${meta.id}">${iconeSvg("editar")}</button>
+                <button class="botao-icone botao-icone--perigo" type="button" title="Excluir meta" data-acao="excluir" data-id="${meta.id}">${iconeSvg("excluir")}</button>
               </div>
             </div>
 
@@ -170,6 +211,7 @@
               <button class="botao-secundario botao-secundario--compacto" type="button" data-acao="movimentar" data-id="${meta.id}">${concluida ? "Ajustar valor" : "Adicionar valor"}</button>
               ${meta.dataLimite ? `<span>Prazo ${formatarData(meta.dataLimite)}</span>` : '<span>Sem prazo definido</span>'}
             </div>
+            ${planejamentoHtml(meta)}
             ${historicoHtml(meta)}
           </article>
         `;
@@ -180,7 +222,7 @@
       const editando = Boolean(meta);
       const overlay = abrirModal(`
         <h3 class="modal-titulo">${editando ? "Editar meta" : "Nova meta"}</h3>
-        <p class="modal-texto">Defina o objetivo e, se já tiver algum valor separado, informe no campo inicial.</p>
+        <p class="modal-texto">Defina o objetivo e, se já tiver algum valor separado antes de usar o Fluxo, informe como valor inicial.</p>
         <form id="formularioMeta">
           <div class="grade-formulario">
             <div class="campo-formulario campo-formulario--largura-total">
@@ -192,7 +234,7 @@
               <input id="metaValor" type="number" step="0.01" min="0.01" required value="${meta?.valorMeta ?? ""}">
             </div>
             <div class="campo-formulario">
-              <label for="metaInicial">Já guardado (R$)</label>
+              <label for="metaInicial">Já guardado antes (R$)</label>
               <input id="metaInicial" type="number" step="0.01" min="0" value="${meta?.valorInicial ?? "0"}">
             </div>
             <div class="campo-formulario">
@@ -231,11 +273,8 @@
         };
 
         try {
-          if (editando) {
-            await atualizarRegistro(uidAtual, "metas", meta.id, dados);
-          } else {
-            await adicionarRegistro(uidAtual, "metas", { ...dados, createdAt: Date.now() });
-          }
+          if (editando) await atualizarRegistro(uidAtual, "metas", meta.id, dados);
+          else await adicionarRegistro(uidAtual, "metas", { ...dados, createdAt: Date.now() });
           fecharModal();
           mostrarToast(editando ? "Meta atualizada." : "Meta criada.", "sucesso");
         } catch (_) {
@@ -248,7 +287,7 @@
       const atual = valorAtualMeta(meta);
       const overlay = abrirModal(`
         <h3 class="modal-titulo">Movimentar ${escaparHtml(meta.nome)}</h3>
-        <p class="modal-texto">Valor atual: <strong class="numero">${formatarMoeda(atual)}</strong></p>
+        <p class="modal-texto">Ao adicionar um valor, ele passa a ser considerado reservado e deixa de compor seu saldo disponível naquele mês.</p>
         <form id="formularioMovimentoMeta">
           <div class="grade-formulario">
             <div class="campo-formulario">
@@ -294,6 +333,7 @@
             valor,
             data: overlay.querySelector("#movimentoData").value,
             observacao: overlay.querySelector("#movimentoObs").value.trim(),
+            origem: "manual",
             createdAt: Date.now()
           });
           await atualizarRegistro(uidAtual, "metas", meta.id, { updatedAt: Date.now() });
@@ -305,16 +345,164 @@
       });
     }
 
+    function abrirPlanejamento(meta, plano = null) {
+      const editando = Boolean(plano);
+      const overlay = abrirModal(`
+        <h3 class="modal-titulo">${editando ? "Editar planejamento" : "Planejar valor mensal"}</h3>
+        <p class="modal-texto">Planejar não altera seu saldo. O dinheiro só será reservado quando você marcar que conseguiu separar o valor.</p>
+        <form id="formularioPlanejamento">
+          <div class="grade-formulario">
+            <div class="campo-formulario">
+              <label for="planoMes">Mês</label>
+              <input id="planoMes" type="month" required value="${plano?.mesReferencia || mesAtual()}" ${plano?.realizado ? "disabled" : ""}>
+            </div>
+            <div class="campo-formulario">
+              <label for="planoValor">Valor planejado (R$)</label>
+              <input id="planoValor" type="number" step="0.01" min="0.01" required value="${plano?.valor ?? ""}">
+            </div>
+          </div>
+          ${plano?.realizado ? '<p class="modal-aviso-suave">Esse mês já foi marcado como separado. Para trocar o mês, desmarque primeiro.</p>' : ""}
+          <div class="modal-acoes">
+            <button class="botao-secundario" type="button" data-fechar-modal>Cancelar</button>
+            <button class="botao-primario" style="width:auto" type="submit">Salvar planejamento</button>
+          </div>
+        </form>
+      `);
+
+      overlay.querySelector("#formularioPlanejamento").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const mes = overlay.querySelector("#planoMes").value || plano?.mesReferencia;
+        const valor = Number(overlay.querySelector("#planoValor").value);
+        if (!mes || valor <= 0) {
+          mostrarToast("Informe um mês e um valor válido.", "erro");
+          return;
+        }
+
+        const novoId = idPlanejamentoMes(mes);
+        const existenteMesmoMes = planejamentosDaMeta(meta).find((item) => item.id === novoId && item.id !== plano?.id);
+        if (existenteMesmoMes) {
+          mostrarToast("Esse mês já possui um valor planejado nesta meta.", "erro");
+          return;
+        }
+
+        try {
+          if (editando && plano.id !== novoId) {
+            await removerRegistro(uidAtual, `metas/${meta.id}/planejamento`, plano.id);
+          }
+
+          const dadosPlano = {
+            mesReferencia: mes,
+            valor,
+            realizado: Boolean(plano?.realizado),
+            realizadoEm: plano?.realizadoEm || "",
+            createdAt: plano?.createdAt || Date.now(),
+            updatedAt: Date.now()
+          };
+          await salvarRegistroComId(uidAtual, `metas/${meta.id}/planejamento`, novoId, dadosPlano);
+
+          if (plano?.realizado) {
+            const movimentoId = idMovimentoPlanejado(plano.id);
+            await salvarRegistroComId(uidAtual, `metas/${meta.id}/movimentos`, movimentoId, {
+              valor,
+              data: plano.realizadoEm || hojeIso(),
+              observacao: `Planejamento de ${formatarMesAno(mes)}`,
+              origem: "planejamento",
+              planejamentoId: novoId,
+              createdAt: plano.movimentoCreatedAt || Date.now(),
+              updatedAt: Date.now()
+            });
+          }
+
+          await atualizarRegistro(uidAtual, "metas", meta.id, { updatedAt: Date.now() });
+          fecharModal();
+          mostrarToast("Planejamento salvo.", "sucesso");
+        } catch (_) {
+          mostrarToast("Não foi possível salvar o planejamento.", "erro");
+        }
+      });
+    }
+
+    async function alternarPlanejamento(meta, plano, realizado) {
+      const movimentoId = idMovimentoPlanejado(plano.id);
+      try {
+        if (realizado) {
+          const data = hojeIso();
+          await salvarRegistroComId(uidAtual, `metas/${meta.id}/movimentos`, movimentoId, {
+            valor: Number(plano.valor) || 0,
+            data,
+            observacao: `Planejamento de ${formatarMesAno(plano.mesReferencia)}`,
+            origem: "planejamento",
+            planejamentoId: plano.id,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          });
+          await atualizarRegistro(uidAtual, `metas/${meta.id}/planejamento`, plano.id, {
+            realizado: true,
+            realizadoEm: data,
+            updatedAt: Date.now()
+          });
+          mostrarToast("Valor separado e adicionado à meta.", "sucesso");
+        } else {
+          await removerRegistro(uidAtual, `metas/${meta.id}/movimentos`, movimentoId);
+          await atualizarRegistro(uidAtual, `metas/${meta.id}/planejamento`, plano.id, {
+            realizado: false,
+            realizadoEm: "",
+            updatedAt: Date.now()
+          });
+          mostrarToast("Marcação desfeita. O valor voltou ao saldo disponível.", "sucesso");
+        }
+        await atualizarRegistro(uidAtual, "metas", meta.id, { updatedAt: Date.now() });
+      } catch (_) {
+        mostrarToast("Não foi possível atualizar o planejamento.", "erro");
+      }
+    }
+
+    async function excluirPlanejamento(meta, plano) {
+      const confirmou = await confirmarExclusao(`Excluir o planejamento de ${formatarMesAno(plano.mesReferencia)}?`);
+      if (!confirmou) return;
+      try {
+        if (plano.realizado) {
+          await removerRegistro(uidAtual, `metas/${meta.id}/movimentos`, idMovimentoPlanejado(plano.id));
+        }
+        await removerRegistro(uidAtual, `metas/${meta.id}/planejamento`, plano.id);
+        await atualizarRegistro(uidAtual, "metas", meta.id, { updatedAt: Date.now() });
+        mostrarToast("Planejamento excluído.", "sucesso");
+      } catch (_) {
+        mostrarToast("Não foi possível excluir o planejamento.", "erro");
+      }
+    }
+
     botaoNovaMeta.addEventListener("click", () => abrirFormularioMeta());
+
+    listaMetas.addEventListener("change", async (evento) => {
+      const controle = evento.target.closest('[data-acao="alternar-plano"]');
+      if (!controle) return;
+      const meta = metas.find((item) => item.id === controle.dataset.meta);
+      const plano = meta ? planejamentosDaMeta(meta).find((item) => item.id === controle.dataset.plano) : null;
+      if (!meta || !plano) return;
+      controle.disabled = true;
+      await alternarPlanejamento(meta, plano, controle.checked);
+    });
 
     listaMetas.addEventListener("click", async (evento) => {
       const botao = evento.target.closest("[data-acao]");
-      if (!botao) return;
-      const meta = metas.find((item) => item.id === botao.dataset.id);
+      if (!botao || botao.matches('input[type="checkbox"]')) return;
+
+      const metaId = botao.dataset.meta || botao.dataset.id;
+      const meta = metas.find((item) => item.id === metaId);
       if (!meta) return;
 
       if (botao.dataset.acao === "editar") abrirFormularioMeta(meta);
       if (botao.dataset.acao === "movimentar") abrirMovimentacao(meta);
+      if (botao.dataset.acao === "planejar") abrirPlanejamento(meta);
+      if (botao.dataset.acao === "editar-plano") {
+        const plano = planejamentosDaMeta(meta).find((item) => item.id === botao.dataset.plano);
+        if (plano) abrirPlanejamento(meta, plano);
+      }
+      if (botao.dataset.acao === "excluir-plano") {
+        const plano = planejamentosDaMeta(meta).find((item) => item.id === botao.dataset.plano);
+        if (plano) await excluirPlanejamento(meta, plano);
+      }
       if (botao.dataset.acao === "excluir") {
         const confirmou = await confirmarExclusao(`Excluir a meta “${meta.nome}” e todo o histórico dela?`);
         if (!confirmou) return;

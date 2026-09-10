@@ -3,13 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Despesas · Controle Financeiro</title>
+  <link rel="icon" href="../assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <title>Despesas · Fluxo — Controle financeiro pessoal</title>
   <script src="../js/theme-init.js"></script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-protegida="true" data-raiz="../">
 
   <main class="container" style="padding-top: var(--esp-6); padding-bottom: var(--esp-7);">
+
+    <a class="marca-sistema" href="dashboard.html" aria-label="Fluxo — Controle financeiro pessoal">
+      <img src="../assets/fluxo-icon.png" alt="">
+      <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>
+    </a>
 
     <div class="topo-app">
       <h1 class="topo-app__titulo" style="border:none; margin:0; padding:0;">Despesas</h1>
@@ -132,7 +140,7 @@
           <div class="linha-registro__valor numero" style="color: var(--cor-despesa)">${formatarMoeda(d.valor)}</div>
           <div class="linha-registro__acoes">
             <button class="botao-icone" title="Editar" data-acao="editar" data-id="${d.id}">${iconeSvg("editar")}</button>
-            <button class="botao-icone" title="Duplicar" data-acao="duplicar" data-id="${d.id}">⧉</button>
+            <button class="botao-icone" title="Duplicar" data-acao="duplicar" data-id="${d.id}">${iconeSvg("duplicar")}</button>
             <button class="botao-icone botao-icone--perigo" title="Excluir" data-acao="excluir" data-id="${d.id}">${iconeSvg("excluir")}</button>
           </div>
         </div>

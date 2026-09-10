@@ -1,4 +1,8 @@
-/* ==========================================================================\n   CALCULOS.JS\n   Regras financeiras centrais do sistema. Mantém Dashboard e Cartões usando\n   a mesma lógica e evita somar duas vezes pagamentos, faturas e acertos.\n   ========================================================================== */
+/* ==========================================================================
+   CALCULOS.JS
+   Regras financeiras centrais do Fluxo. Dashboard, cartões, metas e
+   relatórios usam a mesma lógica para evitar somas duplicadas.
+   ========================================================================== */
 
 function numero(valor) {
   const convertido = Number(valor);
@@ -115,9 +119,6 @@ export function resumoPessoaMes(dados, nomePessoa, mes) {
     .filter((acerto) => acerto.mesReferencia === mes && chavePessoa(acerto.pessoa) === chave)
     .reduce((soma, acerto) => soma + numero(acerto.valor), 0);
 
-  // Compatibilidade com dados anteriores ao histórico de acertos. Assim que
-  // existe um acerto novo para a pessoa/mês, ele vira a fonte de verdade e os
-  // antigos flags "pago" deixam de ser somados novamente.
   const pagoLegadoCartoes = cartoesPessoa.reduce(
     (soma, cartao) => soma + totalPagoLegadoFatura(dados, cartao.id, mes), 0
   );
@@ -158,8 +159,8 @@ export function totalSaidasPagasMes(dados, mes) {
   const despesas = dados.despesas || [];
   const cartoes = dados.cartoes || [];
 
-  // Despesas comuns pagas. As vinculadas a alguém entram pelo bloco de
-  // acerto com a pessoa para não serem debitadas duas vezes.
+  // Despesas vinculadas a alguém entram pelo acerto com a pessoa, evitando
+  // que o mesmo pagamento seja debitado duas vezes.
   const despesasComunsPagas = despesas
     .filter((despesa) => mesDaData(despesa.data) === mes)
     .filter((despesa) => !String(despesa.pessoaRelacionada || "").trim())
@@ -176,26 +177,85 @@ export function totalSaidasPagasMes(dados, mes) {
   return despesasComunsPagas + cartoesPropriosPagos + pessoasPagas;
 }
 
+/* --------------------------------------------------------------------------
+   METAS: dinheiro reservado continua sendo patrimônio, mas deixa de estar
+   disponível para uso cotidiano. Movimentos positivos reservam; negativos
+   devolvem dinheiro ao saldo disponível.
+   -------------------------------------------------------------------------- */
+export function movimentosMetasDoMes(metas = [], mes) {
+  const movimentos = [];
+  metas.forEach((meta) => {
+    Object.entries(meta.movimentos || {}).forEach(([id, movimento]) => {
+      if (mesDaData(movimento.data) !== mes) return;
+      movimentos.push({ id, metaId: meta.id, metaNome: meta.nome || "Meta", ...movimento });
+    });
+  });
+  return movimentos;
+}
+
+export function resumoReservasMetasMes(metas = [], mes) {
+  const movimentos = movimentosMetasDoMes(metas, mes);
+  const reservado = movimentos
+    .filter((item) => numero(item.valor) > 0)
+    .reduce((soma, item) => soma + numero(item.valor), 0);
+  const retirado = movimentos
+    .filter((item) => numero(item.valor) < 0)
+    .reduce((soma, item) => soma + Math.abs(numero(item.valor)), 0);
+  const impactoLiquido = movimentos.reduce((soma, item) => soma + numero(item.valor), 0);
+  return { reservado, retirado, impactoLiquido, movimentos };
+}
+
+/* --------------------------------------------------------------------------
+   VALORES A RECEBER DE PESSOAS: só viram entrada financeira quando o usuário
+   confirma que recebeu. Enquanto pendentes, são apenas um controle auxiliar.
+   -------------------------------------------------------------------------- */
+export function dividasRecebidasNoMes(dividasReceber = [], mes) {
+  return dividasReceber.filter((item) =>
+    item.status === "recebido" && mesDaData(item.dataRecebimento) === mes
+  );
+}
+
+export function totalRecebidoDePessoasMes(dividasReceber = [], mes) {
+  return dividasRecebidasNoMes(dividasReceber, mes)
+    .reduce((soma, item) => soma + numero(item.valor), 0);
+}
+
 export function mesesComMovimentacao(dados) {
   const meses = new Set();
+  (dados.receitas || []).forEach((item) => { const mes = mesDaData(item.data); if (mes) meses.add(mes); });
   (dados.despesas || []).forEach((item) => { const mes = mesDaData(item.data); if (mes) meses.add(mes); });
   (dados.parcelas || []).forEach((item) => { if (item.mesFatura) meses.add(item.mesFatura); });
   (dados.faturasManuais || []).forEach((item) => { if (item.mesReferencia) meses.add(item.mesReferencia); });
   (dados.acertosPessoas || []).forEach((item) => { if (item.mesReferencia) meses.add(item.mesReferencia); });
   (dados.pagamentosFaturas || []).forEach((item) => { if (item.mesReferencia) meses.add(item.mesReferencia); });
+  (dados.dividasReceber || []).forEach((item) => {
+    const mes = mesDaData(item.status === "recebido" ? item.dataRecebimento : item.dataPrevista);
+    if (mes) meses.add(mes);
+  });
+  (dados.metas || []).forEach((meta) => {
+    Object.values(meta.movimentos || {}).forEach((movimento) => {
+      const mes = mesDaData(movimento.data);
+      if (mes) meses.add(mes);
+    });
+  });
   return [...meses].sort();
 }
 
-export function calcularSaldoAtual(dados, mes) {
-  // Neste sistema, “Saldo atual” representa o caixa realizado do mês em
-  // exibição: o que já entrou menos o que já saiu. Isso evita que a simples
-  // regularização de meses antigos altere o saldo do mês atual.
-  const totalRecebido = (dados.receitas || [])
+export function calcularSaldoCaixa(dados, mes) {
+  const receitasRegulares = (dados.receitas || [])
     .filter((receita) => mesDaData(receita.data) === mes)
     .filter((receita) => receita.status === "recebido")
     .reduce((soma, receita) => soma + numero(receita.valor), 0);
+  const recebidosDePessoas = totalRecebidoDePessoasMes(dados.dividasReceber || [], mes);
+  return receitasRegulares + recebidosDePessoas - totalSaidasPagasMes(dados, mes);
+}
 
-  return totalRecebido - totalSaidasPagasMes(dados, mes);
+export function calcularSaldoAtual(dados, mes) {
+  // Mantido por compatibilidade: agora representa o saldo realmente disponível,
+  // já descontando valores que foram separados para metas no mês.
+  const caixa = calcularSaldoCaixa(dados, mes);
+  const reservas = resumoReservasMetasMes(dados.metas || [], mes);
+  return caixa - reservas.impactoLiquido;
 }
 
 export function resumoFinanceiroMes(dados, mes) {
@@ -203,25 +263,37 @@ export function resumoFinanceiroMes(dados, mes) {
   const despesasDoMes = (dados.despesas || []).filter((despesa) => mesDaData(despesa.data) === mes);
 
   const receitasPrevistas = receitasDoMes.reduce((soma, receita) => soma + numero(receita.valor), 0);
-  const receitasRecebidas = receitasDoMes
+  const receitasRegularesRecebidas = receitasDoMes
     .filter((receita) => receita.status === "recebido")
     .reduce((soma, receita) => soma + numero(receita.valor), 0);
+  const receitasRecebidasPessoas = totalRecebidoDePessoasMes(dados.dividasReceber || [], mes);
+  const receitasRecebidas = receitasRegularesRecebidas + receitasRecebidasPessoas;
 
   const despesas = despesasDoMes.reduce((soma, despesa) => soma + numero(despesa.valor), 0);
   const faturas = totalFaturasMes(dados, mes);
   const totalComprometido = despesas + faturas;
   const pago = totalSaidasPagasMes(dados, mes);
+  const reservas = resumoReservasMetasMes(dados.metas || [], mes);
+  const saldoCaixa = receitasRecebidas - pago;
+  const saldoDisponivel = saldoCaixa - reservas.impactoLiquido;
 
   return {
     receitasPrevistas,
+    receitasRegularesRecebidas,
+    receitasRecebidasPessoas,
     receitasRecebidas,
-    aReceber: Math.max(0, receitasPrevistas - receitasRecebidas),
+    aReceber: Math.max(0, receitasPrevistas - receitasRegularesRecebidas),
     despesas,
     faturas,
     totalComprometido,
     pago,
     aPagar: Math.max(0, totalComprometido - pago),
+    reservadoMetas: reservas.reservado,
+    retiradoMetas: reservas.retirado,
+    impactoMetas: reservas.impactoLiquido,
     resultadoPrevisto: receitasPrevistas - totalComprometido,
-    saldoAtual: calcularSaldoAtual(dados, mes)
+    saldoCaixa,
+    saldoDisponivel,
+    saldoAtual: saldoDisponivel
   };
 }

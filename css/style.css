@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CONTROLE FINANCEIRO — SISTEMA DE DESIGN
+   FLUXO — SISTEMA DE DESIGN
    Este arquivo define as bases visuais usadas em TODAS as páginas do
    sistema: cores, tipografia, espaçamentos e o alternador de tema
    claro/escuro. As próximas etapas vão importar e usar essas variáveis,
@@ -1792,6 +1792,9 @@ html[data-tema="escuro"] .previa-parcelas { color: var(--cor-texto); }
 }
 
 .acerto-pessoa__quitado {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   font-weight: 600;
   color: var(--cor-receita);
@@ -2189,6 +2192,9 @@ h1, h2, h3, h4 {
 .fatura__total { font-size: 18px; font-weight: 650; }
 .fatura__resumo-acoes { gap: 6px; }
 .fatura__status-paga {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--cor-receita);
   font-size: 11px;
   font-weight: 650;
@@ -2741,3 +2747,314 @@ h1, h2, h3, h4 {
   .relatorio-conteudo { color: #111; }
   .tabela-relatorio { font-size: 9px; }
 }
+
+/* ==========================================================================
+   FLUXO — IDENTIDADE E AJUSTES CONSOLIDADOS
+   ========================================================================== */
+
+/* Cores mais sóbrias no tema claro. No escuro, os tons luminosos continuam
+   sendo úteis para contraste e permanecem definidos no bloco do tema escuro. */
+:root {
+  --cor-receita: #0B6B50;
+  --cor-despesa: #C83E45;
+  --cor-alerta: #966600;
+}
+
+html[data-tema="escuro"] {
+  --cor-receita: #34D399;
+  --cor-despesa: #F87171;
+  --cor-alerta: #FBBF24;
+}
+
+/* --- Marca compacta nas páginas internas -------------------------------- */
+.marca-sistema {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 18px 0 8px;
+  color: var(--cor-texto);
+}
+.marca-sistema img {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+}
+.marca-sistema span {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.marca-sistema strong {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.marca-sistema small {
+  color: var(--cor-texto-suave);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 500;
+}
+
+/* --- Login: identidade fixa verde + branco, independente do tema -------- */
+body[data-tela-login="true"] {
+  --cor-fundo: #FFFFFF;
+  --cor-superficie: #FFFFFF;
+  --cor-superficie-alt: #F2F5F4;
+  --cor-borda: #DDE5E1;
+  --cor-primaria: #0F6B46;
+  --cor-primaria-hover: #0B5739;
+  --cor-primaria-suave: #E6F2EC;
+  --cor-texto: #111827;
+  --cor-texto-suave: #66736D;
+  --cor-texto-invertido: #FFFFFF;
+  background: #FFFFFF;
+  color: #111827;
+  color-scheme: light;
+}
+body[data-tela-login="true"] .painel-marca {
+  background: linear-gradient(145deg, #34CFA9 0%, #149775 42%, #0F6B46 100%);
+  color: #FFFFFF;
+}
+body[data-tela-login="true"] .painel-formulario {
+  background: #FFFFFF;
+}
+body[data-tela-login="true"] .painel-marca__logo {
+  gap: 10px;
+  color: #FFFFFF;
+}
+.painel-marca__simbolo {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255,255,255,.94);
+  padding: 6px;
+  box-shadow: 0 5px 18px rgba(4, 70, 49, .12);
+}
+.painel-marca__simbolo img { width: 100%; height: 100%; object-fit: contain; }
+.painel-marca__logo > span:last-child { display: flex; flex-direction: column; gap: 1px; }
+.painel-marca__logo strong { font-size: 18px; font-weight: 700; }
+.painel-marca__logo small { font-size: 10px; font-weight: 500; color: rgba(255,255,255,.72); letter-spacing: .01em; }
+.formulario-login__marca {
+  width: 154px;
+  max-height: 58px;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 26px;
+}
+body[data-tela-login="true"] .painel-marca__grafico {
+  overflow: visible;
+  padding-right: 7px;
+}
+body[data-tela-login="true"] .painel-marca__grafico circle { overflow: visible; }
+body[data-tela-login="true"] input,
+body[data-tela-login="true"] textarea,
+body[data-tela-login="true"] select {
+  background: #FFFFFF;
+  color: #111827;
+}
+
+/* --- Subnavegação de Receitas -------------------------------------------- */
+.subnav-local {
+  display: flex;
+  gap: 5px;
+  margin: 0 0 18px;
+  padding: 4px;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--cor-borda);
+  border-radius: 9px;
+  background: var(--cor-superficie);
+}
+.subnav-local__botao {
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 6px;
+  color: var(--cor-texto-suave);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.subnav-local__botao:hover { color: var(--cor-texto); background: var(--cor-superficie-alt); }
+.subnav-local__botao.ativo { color: #FFFFFF; background: var(--cor-primaria); }
+.subnav-local__contador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  font-size: 9px;
+}
+.subnav-local__botao.ativo .subnav-local__contador { background: rgba(255,255,255,.18); }
+[hidden] { display: none !important; }
+
+/* --- Valores a receber de pessoas --------------------------------------- */
+.recebiveis-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.recebiveis-resumo {
+  display: flex;
+  min-width: 0;
+  border: 1px solid var(--cor-borda);
+  border-radius: 9px;
+  background: var(--cor-superficie);
+  overflow: hidden;
+}
+.recebiveis-resumo > div {
+  min-width: 130px;
+  padding: 9px 12px;
+  border-right: 1px solid var(--cor-borda);
+}
+.recebiveis-resumo > div:last-child { border-right: 0; }
+.recebiveis-resumo span { display: block; color: var(--cor-texto-suave); font-size: 9.5px; }
+.recebiveis-resumo strong { display: block; margin-top: 2px; font-size: 13px; font-weight: 650; }
+.recebiveis-nota {
+  margin-bottom: 12px;
+  color: var(--cor-texto-suave);
+  font-size: 10.5px;
+}
+.lista-recebiveis { display: flex; flex-direction: column; gap: 8px; }
+.recebivel-card {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: var(--cor-superficie);
+}
+.recebivel-card--recebido { opacity: .76; }
+.recebivel-card__principal { min-width: 0; }
+.recebivel-card__titulo-linha { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.recebivel-card__titulo-linha h3 { font-size: 13px; font-weight: 650; }
+.recebivel-card__principal p { margin-top: 2px; color: var(--cor-texto); font-size: 11.5px; }
+.recebivel-card__principal small { display: block; margin-top: 2px; color: var(--cor-texto-suave); font-size: 10px; }
+.recebivel-card__valor { font-size: 14px; font-weight: 680; color: var(--cor-texto); white-space: nowrap; }
+.recebivel-card__acoes { display: flex; align-items: center; gap: 4px; }
+.recebiveis-vazio { min-height: 180px; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+.recebiveis-vazio strong { color: var(--cor-texto); font-size: 14px; }
+.recebiveis-vazio span { color: var(--cor-texto-suave); font-size: 11.5px; max-width: 560px; }
+
+/* --- Planejamento mensal das metas -------------------------------------- */
+.meta-planejamento {
+  margin-top: 13px;
+  border-top: 1px solid var(--cor-borda);
+  padding-top: 10px;
+}
+.meta-planejamento > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--cor-texto);
+  font-size: 10.5px;
+  font-weight: 620;
+}
+.meta-planejamento > summary::-webkit-details-marker { display: none; }
+.meta-planejamento > summary::after {
+  content: "+";
+  color: var(--cor-texto-suave);
+  font-size: 15px;
+  font-weight: 400;
+}
+.meta-planejamento[open] > summary::after { content: "−"; }
+.meta-planejamento > summary small { margin-left: auto; color: var(--cor-texto-suave); font-size: 9.5px; font-weight: 500; }
+.meta-planejamento__conteudo { margin-top: 9px; }
+.meta-planejamento__lista { display: flex; flex-direction: column; }
+.meta-planejamento__item {
+  display: grid;
+  grid-template-columns: 24px minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 0;
+  border-top: 1px solid color-mix(in srgb, var(--cor-borda) 70%, transparent);
+}
+.meta-planejamento__item:first-child { border-top: 0; }
+.meta-planejamento__item--realizado .meta-planejamento__info strong { color: var(--cor-texto-suave); text-decoration: line-through; text-decoration-thickness: 1px; }
+.meta-planejamento__check { display: grid; place-items: center; cursor: pointer; }
+.meta-planejamento__check input { position: absolute; opacity: 0; pointer-events: none; }
+.meta-planejamento__check span {
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--cor-borda);
+  border-radius: 5px;
+  background: var(--cor-superficie);
+  position: relative;
+}
+.meta-planejamento__check input:checked + span { border-color: var(--cor-primaria); background: var(--cor-primaria); }
+.meta-planejamento__check input:checked + span::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.meta-planejamento__info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.meta-planejamento__info strong { font-size: 10.5px; font-weight: 600; }
+.meta-planejamento__info small { color: var(--cor-texto-suave); font-size: 9.5px; }
+.meta-planejamento__valor { font-size: 10.5px; font-weight: 650; }
+.meta-planejamento__acoes { display: flex; gap: 1px; }
+.meta-planejamento__adicionar { margin-top: 7px; }
+.meta-planejamento__vazio { color: var(--cor-texto-suave); font-size: 10px; }
+.modal-aviso-suave {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--cor-superficie-alt);
+  color: var(--cor-texto-suave);
+  font-size: 10.5px;
+}
+
+/* Resumos de metas agora comportam quatro itens sem ficar pesados. */
+.metas-resumo > div { min-width: 125px; }
+
+/* Apoio pequeno dentro do resumo de relatórios. */
+.relatorio-resumo__apoio {
+  display: block;
+  margin-top: 2px;
+  color: var(--cor-texto-suave);
+  font-size: 9px;
+  font-weight: 500;
+}
+
+@media (max-width: 760px) {
+  .marca-sistema { margin-top: 12px; }
+  .marca-sistema small { display: none; }
+  .recebiveis-topo { align-items: stretch; flex-direction: column; }
+  .recebiveis-resumo { width: 100%; overflow-x: auto; }
+  .recebiveis-topo .botao-novo { width: 100%; }
+  .recebivel-card { grid-template-columns: 1fr auto; gap: 8px; }
+  .recebivel-card__valor { grid-column: 2; grid-row: 1; align-self: start; }
+  .recebivel-card__acoes { grid-column: 1 / -1; justify-content: flex-end; border-top: 1px solid var(--cor-borda); padding-top: 7px; }
+  .subnav-local { width: 100%; overflow-x: auto; }
+}
+
+@media (max-width: 520px) {
+  .painel-marca__logo small { display: none; }
+  .formulario-login__marca { width: 138px; margin-bottom: 20px; }
+  .recebiveis-resumo > div { min-width: 118px; }
+  .meta-planejamento__item { grid-template-columns: 22px minmax(0,1fr) auto; }
+  .meta-planejamento__acoes { grid-column: 2 / -1; justify-content: flex-end; }
+}
+.marca-sistema { margin: 0 0 10px; }
+@media (max-width: 760px) { .marca-sistema { margin-top: 0; } }

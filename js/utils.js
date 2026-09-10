@@ -139,7 +139,10 @@ export function iconeSvg(nome, tamanho = 16) {
     excluir: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/>',
     duplicar: '<rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',
     usuario: '<circle cx="12" cy="8" r="3"/><path d="M5 20c.8-4 3-6 7-6s6.2 2 7 6"/>',
-    cancelar: '<circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 7 7"/>'
+    cancelar: '<circle cx="12" cy="12" r="9"/><path d="m8.5 8.5 7 7"/>',
+    confirmar: '<path d="m5 12 4 4L19 6"/>',
+    circulo: '<circle cx="12" cy="12" r="8"/>',
+    desfazer: '<path d="M9 7 4 12l5 5"/><path d="M5 12h8a6 6 0 0 1 6 6"/>'
   };
   return caminhos[nome] ? `<svg ${base}>${caminhos[nome]}</svg>` : "";
 }

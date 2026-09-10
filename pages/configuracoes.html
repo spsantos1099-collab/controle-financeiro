@@ -3,12 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Configurações · Controle Financeiro</title>
+  <link rel="icon" href="../assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <title>Configurações · Fluxo — Controle financeiro pessoal</title>
   <script src="../js/theme-init.js"></script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-protegida="true" data-raiz="../">
   <main class="container pagina-app pagina-configuracoes">
+    <a class="marca-sistema" href="dashboard.html" aria-label="Fluxo — Controle financeiro pessoal">
+      <img src="../assets/fluxo-icon.png" alt="">
+      <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>
+    </a>
+
     <div class="topo-app">
       <div>
         <h1 class="topo-app__titulo">Configurações</h1>
@@ -32,7 +40,7 @@
     </nav>
 
     <section class="perfil-cabecalho card">
-      <div class="perfil-avatar" id="perfilAvatar"><span data-usuario-iniciais>CF</span></div>
+      <div class="perfil-avatar" id="perfilAvatar"><span data-usuario-iniciais>FL</span></div>
       <div class="perfil-cabecalho__texto">
         <span class="perfil-cabecalho__rotulo">Seu perfil</span>
         <h2 id="perfilNomeVisual">Minha conta</h2>
@@ -141,8 +149,8 @@
     }
 
     function iniciais(nome) {
-      const partes = String(nome || "CF").trim().split(/\s+/).filter(Boolean);
-      return (partes.length > 1 ? `${partes[0][0]}${partes[partes.length - 1][0]}` : partes[0]?.slice(0, 2) || "CF").toUpperCase();
+      const partes = String(nome || "FL").trim().split(/\s+/).filter(Boolean);
+      return (partes.length > 1 ? `${partes[0][0]}${partes[partes.length - 1][0]}` : partes[0]?.slice(0, 2) || "FL").toUpperCase();
     }
 
     function atualizarPreviewPerfil() {

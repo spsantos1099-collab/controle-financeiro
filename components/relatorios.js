@@ -1,4 +1,7 @@
-/* ==========================================================================\n   COMPONENTS/RELATORIOS.JS\n   Consolidação de dados usada pela tela de Relatórios e exportações.\n   ========================================================================== */
+/* ==========================================================================
+   COMPONENTS/RELATORIOS.JS
+   Consolidação de dados usada pela tela de Relatórios e exportações.
+   ========================================================================== */
 
 import { somarMeses } from "../js/utils.js";
 import { resumoFinanceiroMes, faturaManualDoMes } from "../js/calculos.js";
@@ -6,6 +9,10 @@ import { resumoFinanceiroMes, faturaManualDoMes } from "../js/calculos.js";
 function numero(valor) {
   const n = Number(valor);
   return Number.isFinite(n) ? n : 0;
+}
+
+function mesDaData(data) {
+  return typeof data === "string" && data.length >= 7 ? data.slice(0, 7) : "";
 }
 
 export function mesesEntre(inicio, fim) {
@@ -34,10 +41,15 @@ export function agruparPorAno(resumosMensais) {
         ano,
         receitasPrevistas: 0,
         receitasRecebidas: 0,
+        receitasRecebidasPessoas: 0,
         despesas: 0,
         faturas: 0,
         totalComprometido: 0,
-        pago: 0
+        pago: 0,
+        reservadoMetas: 0,
+        retiradoMetas: 0,
+        impactoMetas: 0,
+        saldoDisponivel: 0
       });
     }
     const alvo = mapa.get(ano);
@@ -48,6 +60,7 @@ export function agruparPorAno(resumosMensais) {
   return [...mapa.values()].map((item) => ({
     ...item,
     resultado: item.receitasRecebidas - item.pago,
+    resultadoDisponivel: item.receitasRecebidas - item.pago - item.impactoMetas,
     resultadoPrevisto: item.receitasPrevistas - item.totalComprometido
   }));
 }
@@ -62,7 +75,7 @@ export function categoriasDespesasPeriodo(dados, meses) {
   const mapa = new Map();
 
   (dados.despesas || []).forEach((despesa) => {
-    const mes = String(despesa.data || "").slice(0, 7);
+    const mes = mesDaData(despesa.data);
     if (conjuntoMeses.has(mes)) adicionarNoMapa(mapa, despesa.categoria, despesa.valor);
   });
 
@@ -88,9 +101,13 @@ export function categoriasReceitasPeriodo(dados, meses) {
   const conjuntoMeses = new Set(meses);
   const mapa = new Map();
   (dados.receitas || []).forEach((receita) => {
-    const mes = String(receita.data || "").slice(0, 7);
+    const mes = mesDaData(receita.data);
     if (!conjuntoMeses.has(mes)) return;
     adicionarNoMapa(mapa, receita.categoria, receita.valor);
+  });
+  (dados.dividasReceber || []).forEach((item) => {
+    if (item.status !== "recebido" || !conjuntoMeses.has(mesDaData(item.dataRecebimento))) return;
+    adicionarNoMapa(mapa, "Recebimentos de pessoas", item.valor);
   });
   return [...mapa.entries()]
     .map(([label, valor]) => ({ label, valor }))
@@ -102,7 +119,7 @@ export function lancamentosPeriodo(dados, meses) {
   const linhas = [];
 
   (dados.receitas || []).forEach((item) => {
-    if (!conjuntoMeses.has(String(item.data || "").slice(0, 7))) return;
+    if (!conjuntoMeses.has(mesDaData(item.data))) return;
     linhas.push({
       tipo: "Receita",
       descricao: item.descricao || "Receita",
@@ -114,8 +131,21 @@ export function lancamentosPeriodo(dados, meses) {
     });
   });
 
+  (dados.dividasReceber || []).forEach((item) => {
+    if (item.status !== "recebido" || !conjuntoMeses.has(mesDaData(item.dataRecebimento))) return;
+    linhas.push({
+      tipo: "Receita",
+      descricao: item.descricao || "Valor recebido",
+      categoria: "Recebimentos de pessoas",
+      data: item.dataRecebimento || "",
+      status: "recebido",
+      origem: item.pessoa || "Pessoa",
+      valor: numero(item.valor)
+    });
+  });
+
   (dados.despesas || []).forEach((item) => {
-    if (!conjuntoMeses.has(String(item.data || "").slice(0, 7))) return;
+    if (!conjuntoMeses.has(mesDaData(item.data))) return;
     linhas.push({
       tipo: "Despesa",
       descricao: item.descricao || "Despesa",
@@ -159,15 +189,30 @@ export function lancamentosPeriodo(dados, meses) {
     });
   });
 
+  (dados.metas || []).forEach((meta) => {
+    Object.values(meta.movimentos || {}).forEach((movimento) => {
+      if (!conjuntoMeses.has(mesDaData(movimento.data))) return;
+      linhas.push({
+        tipo: "Meta",
+        descricao: movimento.observacao || (numero(movimento.valor) >= 0 ? `Valor reservado em ${meta.nome || "meta"}` : `Valor retirado de ${meta.nome || "meta"}`),
+        categoria: meta.nome || "Meta",
+        data: movimento.data || "",
+        status: numero(movimento.valor) >= 0 ? "reservado" : "retirado",
+        origem: movimento.origem || "Meta",
+        valor: numero(movimento.valor)
+      });
+    });
+  });
+
   return linhas.sort((a, b) => String(a.data).localeCompare(String(b.data)) || a.tipo.localeCompare(b.tipo));
 }
 
 export function destaquesPeriodo(dados, meses) {
   const linhas = lancamentosPeriodo(dados, meses);
   const receitas = linhas.filter((item) => item.tipo === "Receita");
-  const gastos = linhas.filter((item) => item.tipo !== "Receita");
-  const maiorReceita = receitas.sort((a, b) => b.valor - a.valor)[0] || null;
-  const maiorGasto = gastos.sort((a, b) => b.valor - a.valor)[0] || null;
+  const gastos = linhas.filter((item) => ["Despesa", "Fatura", "Cartão"].includes(item.tipo));
+  const maiorReceita = [...receitas].sort((a, b) => b.valor - a.valor)[0] || null;
+  const maiorGasto = [...gastos].sort((a, b) => b.valor - a.valor)[0] || null;
   const categoriasDespesas = categoriasDespesasPeriodo(dados, meses);
   const categoriasReceitas = categoriasReceitasPeriodo(dados, meses);
   return {

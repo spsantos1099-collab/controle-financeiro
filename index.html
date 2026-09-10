@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-tema="claro">
+<html lang="pt-BR" data-tema="claro" style="color-scheme: light;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Entrar · Controle Financeiro</title>
-  <script src="js/theme-init.js"></script>
+  <link rel="icon" href="assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <title>Entrar · Fluxo — Controle financeiro pessoal</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-tela-login="true">
@@ -14,30 +16,32 @@
     <!-- Painel de marca (some em telas pequenas para dar lugar ao formulário) -->
     <section class="painel-marca">
       <div class="painel-marca__logo">
-        <span class="ponto"></span> Controle Financeiro
+        <span class="painel-marca__simbolo"><img src="assets/fluxo-icon.png" alt=""></span>
+        <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>
       </div>
 
       <div class="painel-marca__corpo">
-        <h1 class="painel-marca__titulo">Suas finanças, sob controle, em um só lugar.</h1>
+        <h1 class="painel-marca__titulo">Seu dinheiro, em movimento e sob controle.</h1>
         <p class="painel-marca__subtitulo">
-          Receitas, despesas, cartões e metas organizados automaticamente —
-          sem precisar mais abrir uma planilha.
+          Acompanhe receitas, despesas, cartões, metas e tudo o que realmente importa
+          no seu controle financeiro pessoal.
         </p>
 
         <!-- Elemento assinatura: linha de fluxo financeiro animada -->
-        <svg class="painel-marca__grafico" viewBox="0 0 420 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <svg class="painel-marca__grafico" viewBox="-6 0 432 140" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M0 100 C 60 100, 60 40, 120 40 S 180 90, 240 70 S 300 20, 360 30 S 400 55, 420 45"
                 stroke="#4FE8C3" stroke-width="3" stroke-linecap="round"/>
           <circle cx="420" cy="45" r="5" fill="#4FE8C3"/>
         </svg>
       </div>
 
-      <p class="painel-marca__rodape">Feito para uso pessoal · seus dados são só seus</p>
+      <p class="painel-marca__rodape">Fluxo · controle financeiro pessoal</p>
     </section>
 
     <!-- Painel de formulário -->
     <section class="painel-formulario">
       <div class="formulario-login">
+        <img class="formulario-login__marca" src="assets/fluxo-logo.png" alt="Fluxo — Controle financeiro pessoal">
 
         <div class="formulario-login__cabecalho">
           <h2 class="formulario-login__titulo">Bem-vindo</h2>

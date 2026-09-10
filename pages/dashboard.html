@@ -3,13 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard · Controle Financeiro</title>
+  <link rel="icon" href="../assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <title>Dashboard · Fluxo — Controle financeiro pessoal</title>
   <script src="../js/theme-init.js"></script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-protegida="true" data-raiz="../">
 
   <main class="container pagina-app pagina-dashboard">
+    <a class="marca-sistema" href="dashboard.html" aria-label="Fluxo — Controle financeiro pessoal">
+      <img src="../assets/fluxo-icon.png" alt="">
+      <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>
+    </a>
+
     <div class="topo-app">
       <div>
         <h1 class="topo-app__titulo">Visão geral</h1>
@@ -34,9 +42,9 @@
 
     <section class="dashboard-principal" aria-label="Resumo financeiro principal">
       <article class="dashboard-card dashboard-card--destaque">
-        <span class="dashboard-card__rotulo">Saldo atual</span>
+        <span class="dashboard-card__rotulo">Saldo disponível</span>
         <strong class="dashboard-card__valor numero" id="valorSaldoAtual">R$ 0,00</strong>
-        <span class="dashboard-card__apoio">o que efetivamente sobrou</span>
+        <span class="dashboard-card__apoio" id="apoioSaldoAtual">após pagamentos e valores reservados</span>
       </article>
 
       <article class="dashboard-card">
@@ -141,8 +149,11 @@
     let faturasManuais = [];
     let acertosPessoas = [];
     let pagamentosFaturas = [];
+    let metas = [];
+    let dividasReceber = [];
 
     const valorSaldoAtual = document.getElementById("valorSaldoAtual");
+    const apoioSaldoAtual = document.getElementById("apoioSaldoAtual");
     const valorRecebidoMes = document.getElementById("valorRecebidoMes");
     const apoioRecebidoMes = document.getElementById("apoioRecebidoMes");
     const valorPagoMes = document.getElementById("valorPagoMes");
@@ -164,7 +175,9 @@
         parcelas,
         faturasManuais,
         acertosPessoas,
-        pagamentosFaturas
+        pagamentosFaturas,
+        metas,
+        dividasReceber
       };
     }
 
@@ -262,9 +275,8 @@
     }
 
     function proximosRecebimentos() {
-      return receitas
+      const regulares = receitas
         .filter((receita) => receita.status === "pendente")
-        .sort((a, b) => (a.data || "").localeCompare(b.data || ""))
         .map((receita) => ({
           descricao: receita.descricao || "Receita",
           valor: Number(receita.valor) || 0,
@@ -272,6 +284,24 @@
           contexto: receita.categoria || "Receita",
           tipo: "receita"
         }));
+
+      const dePessoas = dividasReceber
+        .filter((item) => item.status !== "recebido")
+        .map((item) => ({
+          descricao: `${item.pessoa || "Pessoa"}: ${item.descricao || "valor a receber"}`,
+          valor: Number(item.valor) || 0,
+          data: item.dataPrevista || "",
+          dataTexto: "Sem data prevista",
+          contexto: "Valor a receber de pessoa",
+          tipo: "receita"
+        }));
+
+      return [...regulares, ...dePessoas].sort((a, b) => {
+        if (a.data && b.data) return a.data.localeCompare(b.data);
+        if (a.data) return -1;
+        if (b.data) return 1;
+        return a.descricao.localeCompare(b.descricao);
+      });
     }
 
     function contarVencidas(mes) {
@@ -324,11 +354,21 @@
       const mes = mesAtual();
       const resumo = resumoFinanceiroMes(dadosFinanceiros(), mes);
 
-      valorSaldoAtual.textContent = formatarMoeda(resumo.saldoAtual);
-      classeValor(valorSaldoAtual, resumo.saldoAtual);
+      valorSaldoAtual.textContent = formatarMoeda(resumo.saldoDisponivel);
+      classeValor(valorSaldoAtual, resumo.saldoDisponivel);
+      if (resumo.reservadoMetas > 0 || resumo.retiradoMetas > 0) {
+        const partes = [];
+        if (resumo.reservadoMetas > 0) partes.push(`${formatarMoeda(resumo.reservadoMetas)} reservado em metas`);
+        if (resumo.retiradoMetas > 0) partes.push(`${formatarMoeda(resumo.retiradoMetas)} retirado de metas`);
+        apoioSaldoAtual.textContent = partes.join(" · ");
+      } else {
+        apoioSaldoAtual.textContent = "após pagamentos e valores reservados";
+      }
 
       valorRecebidoMes.textContent = formatarMoeda(resumo.receitasRecebidas);
-      apoioRecebidoMes.textContent = `de ${formatarMoeda(resumo.receitasPrevistas)} previstos`;
+      apoioRecebidoMes.textContent = resumo.receitasRecebidasPessoas > 0
+        ? `inclui ${formatarMoeda(resumo.receitasRecebidasPessoas)} recebidos de pessoas`
+        : `de ${formatarMoeda(resumo.receitasPrevistas)} previstos`;
 
       valorPagoMes.textContent = formatarMoeda(resumo.pago);
       valorTotalMes.textContent = formatarMoeda(resumo.totalComprometido);
@@ -357,6 +397,8 @@
       observarLista(uidAtual, "faturasManuais", (dados) => { faturasManuais = paraLista(dados); recalcularTudo(); });
       observarLista(uidAtual, "acertosPessoas", (dados) => { acertosPessoas = paraLista(dados); recalcularTudo(); });
       observarLista(uidAtual, "pagamentosFaturas", (dados) => { pagamentosFaturas = paraLista(dados); recalcularTudo(); });
+      observarLista(uidAtual, "metas", (dados) => { metas = paraLista(dados); recalcularTudo(); });
+      observarLista(uidAtual, "dividasReceber", (dados) => { dividasReceber = paraLista(dados); recalcularTudo(); });
     });
 
     recalcularTudo();

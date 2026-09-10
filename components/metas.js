@@ -1,8 +1,26 @@
-/* ==========================================================================\n   COMPONENTS/METAS.JS\n   Regras puras das metas financeiras.\n   ========================================================================== */
+/* ==========================================================================
+   COMPONENTS/METAS.JS
+   Regras puras das metas financeiras e do planejamento mensal.
+   ========================================================================== */
 
 export function movimentosDaMeta(meta = {}) {
   const objeto = meta.movimentos || {};
   return Object.entries(objeto).map(([id, dados]) => ({ id, ...dados }));
+}
+
+export function planejamentosDaMeta(meta = {}) {
+  const objeto = meta.planejamento || {};
+  return Object.entries(objeto)
+    .map(([id, dados]) => ({ id, ...dados }))
+    .sort((a, b) => String(a.mesReferencia || "").localeCompare(String(b.mesReferencia || "")));
+}
+
+export function idPlanejamentoMes(mes = "") {
+  return String(mes).replace(/[^0-9-]/g, "").replace("-", "_");
+}
+
+export function idMovimentoPlanejado(idPlanejamento = "") {
+  return `planejado_${String(idPlanejamento).replace(/[^a-zA-Z0-9_-]/g, "")}`;
 }
 
 export function valorAtualMeta(meta = {}) {

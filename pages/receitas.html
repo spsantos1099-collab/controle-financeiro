@@ -3,23 +3,33 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Receitas · Controle Financeiro</title>
+  <title>Receitas · Fluxo — Controle financeiro pessoal</title>
+  <link rel="icon" href="../assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
   <script src="../js/theme-init.js"></script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-protegida="true" data-raiz="../">
 
-  <main class="container" style="padding-top: var(--esp-6); padding-bottom: var(--esp-7);">
+  <main class="container pagina-app pagina-receitas">
+    <a class="marca-sistema" href="dashboard.html" aria-label="Fluxo — Controle financeiro pessoal">
+      <img src="../assets/fluxo-icon.png" alt="">
+      <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>
+    </a>
 
     <div class="topo-app">
-      <h1 class="topo-app__titulo" style="border:none; margin:0; padding:0;">Receitas</h1>
+      <div>
+        <h1 class="topo-app__titulo">Receitas</h1>
+        <p class="topo-app__subtitulo">Entradas previstas, recebidas e valores que outras pessoas ainda precisam te pagar.</p>
+      </div>
       <div class="topo-app__usuario">
         <span><strong data-usuario-resumo></strong></span>
         <button data-sair class="botao-sair" type="button">Sair</button>
       </div>
     </div>
 
-    <nav class="nav-paginas">
+    <nav class="nav-paginas" aria-label="Navegação principal">
       <a href="dashboard.html">Dashboard</a>
       <a href="receitas.html" class="ativa">Receitas</a>
       <a href="despesas.html">Despesas</a>
@@ -30,65 +40,114 @@
       <a href="configuracoes.html">Configurações</a>
     </nav>
 
-    <div class="cabecalho-pagina">
-      <div></div>
-      <button class="botao-novo" id="botaoNovaReceita" type="button">+ Nova receita</button>
+    <div class="subnav-local" role="tablist" aria-label="Áreas de receitas">
+      <button type="button" class="subnav-local__botao ativo" data-visao="receitas" role="tab" aria-selected="true">Receitas</button>
+      <button type="button" class="subnav-local__botao" data-visao="pessoas" role="tab" aria-selected="false">Pessoas que me devem <span id="contadorDividasPendentes" class="subnav-local__contador">0</span></button>
     </div>
 
-    <div class="barra-filtros">
-      <input type="search" id="campoBusca" placeholder="Pesquisar por descrição...">
-      <select id="filtroStatus">
-        <option value="">Todos os status</option>
-        <option value="recebido">Recebido</option>
-        <option value="pendente">Pendente</option>
-        <option value="atrasado">Atrasado</option>
-      </select>
-      <select id="filtroCategoria">
-        <option value="">Todas as categorias</option>
-      </select>
-    </div>
+    <section id="visaoReceitas" class="visao-receitas">
+      <div class="cabecalho-pagina">
+        <div></div>
+        <button class="botao-novo" id="botaoNovaReceita" type="button">Nova receita</button>
+      </div>
 
-    <div id="listaReceitas" class="lista-registros"></div>
+      <div class="barra-filtros">
+        <input type="search" id="campoBusca" placeholder="Pesquisar por descrição...">
+        <select id="filtroStatus">
+          <option value="">Todos os status</option>
+          <option value="recebido">Recebido</option>
+          <option value="pendente">Pendente</option>
+          <option value="atrasado">Atrasado</option>
+        </select>
+        <select id="filtroCategoria">
+          <option value="">Todas as categorias</option>
+        </select>
+      </div>
 
+      <div id="listaReceitas" class="lista-registros"></div>
+    </section>
+
+    <section id="visaoPessoas" class="visao-recebiveis" hidden>
+      <div class="recebiveis-topo">
+        <div class="recebiveis-resumo" id="resumoRecebiveis"></div>
+        <button class="botao-novo" id="botaoNovaDivida" type="button">Novo valor a receber</button>
+      </div>
+      <div class="recebiveis-nota">Esses valores só entram nas suas receitas quando você confirmar que recebeu.</div>
+      <div id="listaRecebiveis" class="lista-recebiveis" aria-live="polite"></div>
+    </section>
   </main>
 
   <datalist id="categoriasReceita"></datalist>
 
   <script type="module">
-    import { observarUsuario, observarLista, adicionarRegistro, atualizarRegistro, removerRegistro } from "../js/firebase.js";
-    import { formatarMoeda, formatarData, paraLista, iconeSvg } from "../js/utils.js";
+    import {
+      observarUsuario, observarLista, adicionarRegistro, atualizarRegistro,
+      removerRegistro, salvarRegistroComId
+    } from "../js/firebase.js";
+    import { formatarMoeda, formatarData, paraLista, iconeSvg, hojeIso } from "../js/utils.js";
     import { CATEGORIAS_RECEITA_PADRAO } from "../js/config.js";
     import { abrirModal, fecharModal, confirmarExclusao } from "../components/modal.js";
     import { mostrarToast } from "../js/app.js";
+    import { totalPendenteRecebiveis, totalRecebidoRecebiveis, ordenarRecebiveis } from "../components/recebiveis.js";
+    import { valorAtualMeta } from "../components/metas.js";
 
     let uidAtual = null;
     let receitas = [];
+    let dividasReceber = [];
+    let metas = [];
 
     const listaReceitas = document.getElementById("listaReceitas");
     const campoBusca = document.getElementById("campoBusca");
     const filtroStatus = document.getElementById("filtroStatus");
     const filtroCategoria = document.getElementById("filtroCategoria");
     const datalistCategorias = document.getElementById("categoriasReceita");
+    const listaRecebiveis = document.getElementById("listaRecebiveis");
+    const resumoRecebiveis = document.getElementById("resumoRecebiveis");
+    const contadorPendentes = document.getElementById("contadorDividasPendentes");
 
-    document.getElementById("botaoNovaReceita").addEventListener("click", () => abrirFormulario());
+    document.getElementById("botaoNovaReceita").addEventListener("click", () => abrirFormularioReceita());
+    document.getElementById("botaoNovaDivida").addEventListener("click", () => abrirFormularioDivida());
+    campoBusca.addEventListener("input", renderizarListaReceitas);
+    filtroStatus.addEventListener("change", renderizarListaReceitas);
+    filtroCategoria.addEventListener("change", renderizarListaReceitas);
 
-    campoBusca.addEventListener("input", renderizarLista);
-    filtroStatus.addEventListener("change", renderizarLista);
-    filtroCategoria.addEventListener("change", renderizarLista);
+    document.querySelectorAll("[data-visao]").forEach((botao) => {
+      botao.addEventListener("click", () => {
+        const visao = botao.dataset.visao;
+        document.querySelectorAll("[data-visao]").forEach((item) => {
+          const ativa = item === botao;
+          item.classList.toggle("ativo", ativa);
+          item.setAttribute("aria-selected", String(ativa));
+        });
+        document.getElementById("visaoReceitas").hidden = visao !== "receitas";
+        document.getElementById("visaoPessoas").hidden = visao !== "pessoas";
+      });
+    });
+
+    function escaparHtml(valor = "") {
+      return String(valor)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
 
     function atualizarCategoriasDisponiveis() {
       const categoriasUsadas = [...new Set(receitas.map((r) => r.categoria).filter(Boolean))];
       const todasCategorias = [...new Set([...CATEGORIAS_RECEITA_PADRAO, ...categoriasUsadas])].sort();
-
-      datalistCategorias.innerHTML = todasCategorias.map((c) => `<option value="${c}"></option>`).join("");
-
+      datalistCategorias.innerHTML = todasCategorias.map((c) => `<option value="${escaparHtml(c)}"></option>`).join("");
       const categoriaSelecionada = filtroCategoria.value;
       filtroCategoria.innerHTML = '<option value="">Todas as categorias</option>' +
-        todasCategorias.map((c) => `<option value="${c}">${c}</option>`).join("");
+        todasCategorias.map((c) => `<option value="${escaparHtml(c)}">${escaparHtml(c)}</option>`).join("");
       filtroCategoria.value = categoriaSelecionada;
     }
 
-    function renderizarLista() {
+    function rotuloStatus(status) {
+      return { recebido: "Recebido", pendente: "Pendente", atrasado: "Atrasado" }[status] || status;
+    }
+
+    function renderizarListaReceitas() {
       const busca = campoBusca.value.trim().toLowerCase();
       const status = filtroStatus.value;
       const categoria = filtroCategoria.value;
@@ -107,67 +166,101 @@
       listaReceitas.innerHTML = filtradas.map((r) => `
         <div class="linha-registro">
           <div>
-            <div class="linha-registro__descricao">${r.descricao || "Sem descrição"}</div>
-            <div class="linha-registro__categoria">${r.categoria || "Sem categoria"}</div>
+            <div class="linha-registro__descricao">${escaparHtml(r.descricao || "Sem descrição")}</div>
+            <div class="linha-registro__categoria">${escaparHtml(r.categoria || "Sem categoria")}</div>
           </div>
           <div class="linha-registro__data">${formatarData(r.data)}</div>
           <div><span class="badge-status badge-status--${r.status}">${rotuloStatus(r.status)}</span></div>
-          <div class="linha-registro__valor numero" style="color: var(--cor-receita)">${formatarMoeda(r.valor)}</div>
+          <div class="linha-registro__valor numero valor-receita">${formatarMoeda(r.valor)}</div>
           <div class="linha-registro__acoes">
-            <button class="botao-icone" title="Editar" data-acao="editar" data-id="${r.id}">${iconeSvg("editar")}</button>
-            <button class="botao-icone" title="Duplicar" data-acao="duplicar" data-id="${r.id}">⧉</button>
-            <button class="botao-icone botao-icone--perigo" title="Excluir" data-acao="excluir" data-id="${r.id}">${iconeSvg("excluir")}</button>
+            <button class="botao-icone" type="button" title="Editar" data-acao="editar-receita" data-id="${r.id}">${iconeSvg("editar")}</button>
+            <button class="botao-icone" type="button" title="Duplicar" data-acao="duplicar-receita" data-id="${r.id}">${iconeSvg("duplicar")}</button>
+            <button class="botao-icone botao-icone--perigo" type="button" title="Excluir" data-acao="excluir-receita" data-id="${r.id}">${iconeSvg("excluir")}</button>
           </div>
         </div>
       `).join("");
     }
 
-    function rotuloStatus(status) {
-      return { recebido: "Recebido", pendente: "Pendente", atrasado: "Atrasado" }[status] || status;
+    function renderizarRecebiveis() {
+      const pendentes = dividasReceber.filter((item) => item.status !== "recebido");
+      contadorPendentes.textContent = String(pendentes.length);
+      resumoRecebiveis.innerHTML = `
+        <div><span>A receber</span><strong class="numero">${formatarMoeda(totalPendenteRecebiveis(dividasReceber))}</strong></div>
+        <div><span>Já recebido</span><strong class="numero">${formatarMoeda(totalRecebidoRecebiveis(dividasReceber))}</strong></div>
+        <div><span>Pessoas pendentes</span><strong>${new Set(pendentes.map((item) => String(item.pessoa || "").trim()).filter(Boolean)).size}</strong></div>`;
+
+      const ordenadas = ordenarRecebiveis(dividasReceber);
+      if (!ordenadas.length) {
+        listaRecebiveis.innerHTML = `
+          <div class="estado-vazio recebiveis-vazio">
+            <strong>Ninguém te deve nada cadastrado</strong>
+            <span>Use esta área para controlar valores emprestados, reembolsos ou qualquer quantia que precisa voltar para você.</span>
+          </div>`;
+        return;
+      }
+
+      const hoje = hojeIso();
+      listaRecebiveis.innerHTML = ordenadas.map((item) => {
+        const recebido = item.status === "recebido";
+        const atrasado = !recebido && item.dataPrevista && item.dataPrevista < hoje;
+        const meta = item.metaIdDestino ? metas.find((m) => m.id === item.metaIdDestino) : null;
+        const destino = recebido
+          ? (item.destino === "meta" ? `Enviado para ${escaparHtml(meta?.nome || "meta")}` : "Mantido no saldo disponível")
+          : "";
+        return `
+          <article class="recebivel-card ${recebido ? "recebivel-card--recebido" : ""}" data-id="${item.id}">
+            <div class="recebivel-card__principal">
+              <div class="recebivel-card__titulo-linha">
+                <h3>${escaparHtml(item.pessoa || "Pessoa")}</h3>
+                <span class="badge-status badge-status--${recebido ? "recebido" : (atrasado ? "atrasado" : "pendente")}">${recebido ? "Recebido" : (atrasado ? "Atrasado" : "Pendente")}</span>
+              </div>
+              <p>${escaparHtml(item.descricao || "Valor a receber")}</p>
+              <small>${recebido ? `Recebido em ${formatarData(item.dataRecebimento)}` : (item.dataPrevista ? `Previsto para ${formatarData(item.dataPrevista)}` : "Sem data prevista")}${destino ? ` · ${destino}` : ""}</small>
+            </div>
+            <strong class="recebivel-card__valor numero">${formatarMoeda(item.valor)}</strong>
+            <div class="recebivel-card__acoes">
+              ${!recebido ? `<button class="botao-secundario botao-secundario--compacto" type="button" data-acao="receber-divida" data-id="${item.id}">Marcar como recebido</button>` : `<button class="botao-texto" type="button" data-acao="reabrir-divida" data-id="${item.id}">Desfazer recebimento</button>`}
+              <button class="botao-icone" type="button" title="Editar" data-acao="editar-divida" data-id="${item.id}">${iconeSvg("editar")}</button>
+              <button class="botao-icone botao-icone--perigo" type="button" title="Excluir" data-acao="excluir-divida" data-id="${item.id}">${iconeSvg("excluir")}</button>
+            </div>
+          </article>`;
+      }).join("");
     }
 
     listaReceitas.addEventListener("click", async (evento) => {
       const botao = evento.target.closest("[data-acao]");
       if (!botao) return;
-
-      const id = botao.dataset.id;
-      const receita = receitas.find((r) => r.id === id);
+      const receita = receitas.find((r) => r.id === botao.dataset.id);
       if (!receita) return;
 
-      if (botao.dataset.acao === "editar") {
-        abrirFormulario(receita);
-      }
-
-      if (botao.dataset.acao === "duplicar") {
+      if (botao.dataset.acao === "editar-receita") abrirFormularioReceita(receita);
+      if (botao.dataset.acao === "duplicar-receita") {
         const { id: _id, ...dados } = receita;
         await adicionarRegistro(uidAtual, "receitas", { ...dados, createdAt: Date.now(), updatedAt: Date.now() });
-        mostrarToast("Receita duplicada com sucesso!", "sucesso");
+        mostrarToast("Receita duplicada.", "sucesso");
       }
-
-      if (botao.dataset.acao === "excluir") {
-        const confirmou = await confirmarExclusao(`Excluir a receita "${receita.descricao}"? Essa ação não pode ser desfeita.`);
-        if (confirmou) {
-          try {
-            await removerRegistro(uidAtual, "receitas", id);
-            mostrarToast("Receita excluída.", "sucesso");
-          } catch (erro) {
-            mostrarToast("Não foi possível excluir. Tente novamente.", "erro");
-          }
+      if (botao.dataset.acao === "excluir-receita") {
+        const confirmou = await confirmarExclusao(`Excluir a receita “${receita.descricao}”?`);
+        if (!confirmou) return;
+        try {
+          await removerRegistro(uidAtual, "receitas", receita.id);
+          mostrarToast("Receita excluída.", "sucesso");
+        } catch (_) {
+          mostrarToast("Não foi possível excluir.", "erro");
         }
       }
     });
 
-    function abrirFormulario(receitaExistente = null) {
+    function abrirFormularioReceita(receitaExistente = null) {
       const editando = Boolean(receitaExistente);
       const r = receitaExistente || {};
-
       const overlay = abrirModal(`
         <h3 class="modal-titulo">${editando ? "Editar receita" : "Nova receita"}</h3>
         <form id="formularioReceita">
           <div class="grade-formulario">
             <div class="campo-formulario campo-formulario--largura-total">
               <label for="campoDescricao">Descrição</label>
-              <input type="text" id="campoDescricao" required value="${r.descricao || ""}" placeholder="Ex: Salário">
+              <input type="text" id="campoDescricao" required value="${escaparHtml(r.descricao || "")}" placeholder="Ex: Salário">
             </div>
             <div class="campo-formulario">
               <label for="campoValor">Valor (R$)</label>
@@ -175,11 +268,11 @@
             </div>
             <div class="campo-formulario">
               <label for="campoData">Data</label>
-              <input type="date" id="campoData" required value="${r.data || new Date().toISOString().slice(0,10)}">
+              <input type="date" id="campoData" required value="${r.data || hojeIso()}">
             </div>
             <div class="campo-formulario">
               <label for="campoCategoria">Categoria</label>
-              <input type="text" id="campoCategoria" list="categoriasReceita" required value="${r.categoria || ""}" placeholder="Escolha ou digite uma nova">
+              <input type="text" id="campoCategoria" list="categoriasReceita" required value="${escaparHtml(r.categoria || "")}" placeholder="Escolha ou digite uma nova">
             </div>
             <div class="campo-formulario">
               <label for="campoStatus">Status</label>
@@ -191,27 +284,25 @@
             </div>
             <div class="campo-formulario">
               <label for="campoFormaPagamento">Forma de recebimento</label>
-              <input type="text" id="campoFormaPagamento" value="${r.formaPagamento || ""}" placeholder="Ex: Pix">
+              <input type="text" id="campoFormaPagamento" value="${escaparHtml(r.formaPagamento || "")}" placeholder="Ex: Pix">
             </div>
             <div class="campo-formulario">
               <label for="campoContaBancaria">Conta bancária</label>
-              <input type="text" id="campoContaBancaria" value="${r.contaBancaria || ""}" placeholder="Ex: Nubank">
+              <input type="text" id="campoContaBancaria" value="${escaparHtml(r.contaBancaria || "")}" placeholder="Ex: Nubank">
             </div>
             <div class="campo-formulario campo-formulario--largura-total">
               <label for="campoObservacoes">Observações</label>
-              <textarea id="campoObservacoes">${r.observacoes || ""}</textarea>
+              <textarea id="campoObservacoes">${escaparHtml(r.observacoes || "")}</textarea>
             </div>
           </div>
           <div class="modal-acoes">
             <button type="button" class="botao-secundario" data-fechar-modal>Cancelar</button>
             <button type="submit" class="botao-primario" style="width:auto;">Salvar</button>
           </div>
-        </form>
-      `);
+        </form>`);
 
       overlay.querySelector("#formularioReceita").addEventListener("submit", async (evento) => {
         evento.preventDefault();
-
         const dados = {
           descricao: overlay.querySelector("#campoDescricao").value.trim(),
           valor: Number(overlay.querySelector("#campoValor").value),
@@ -223,30 +314,229 @@
           observacoes: overlay.querySelector("#campoObservacoes").value.trim(),
           updatedAt: Date.now()
         };
-
         try {
-          if (editando) {
-            await atualizarRegistro(uidAtual, "receitas", receitaExistente.id, dados);
-            mostrarToast("Receita atualizada!", "sucesso");
-          } else {
-            await adicionarRegistro(uidAtual, "receitas", { ...dados, createdAt: Date.now() });
-            mostrarToast("Receita adicionada!", "sucesso");
-          }
+          if (editando) await atualizarRegistro(uidAtual, "receitas", receitaExistente.id, dados);
+          else await adicionarRegistro(uidAtual, "receitas", { ...dados, createdAt: Date.now() });
           fecharModal();
-        } catch (erro) {
-          mostrarToast("Não foi possível salvar. Tente novamente.", "erro");
+          mostrarToast(editando ? "Receita atualizada." : "Receita adicionada.", "sucesso");
+        } catch (_) {
+          mostrarToast("Não foi possível salvar.", "erro");
         }
       });
     }
 
+    function abrirFormularioDivida(divida = null) {
+      const editando = Boolean(divida);
+      const overlay = abrirModal(`
+        <h3 class="modal-titulo">${editando ? "Editar valor a receber" : "Novo valor a receber"}</h3>
+        <p class="modal-texto">Cadastre o que alguém precisa te devolver. Isso não entra no saldo até o recebimento ser confirmado.</p>
+        <form id="formularioDivida">
+          <div class="grade-formulario">
+            <div class="campo-formulario">
+              <label for="dividaPessoa">Pessoa</label>
+              <input id="dividaPessoa" type="text" required maxlength="80" value="${escaparHtml(divida?.pessoa || "")}" placeholder="Ex: Ana">
+            </div>
+            <div class="campo-formulario">
+              <label for="dividaValor">Valor (R$)</label>
+              <input id="dividaValor" type="number" step="0.01" min="0.01" required value="${divida?.valor ?? ""}">
+            </div>
+            <div class="campo-formulario campo-formulario--largura-total">
+              <label for="dividaDescricao">Descrição</label>
+              <input id="dividaDescricao" type="text" required maxlength="100" value="${escaparHtml(divida?.descricao || "")}" placeholder="Ex: Compra que paguei para ela">
+            </div>
+            <div class="campo-formulario">
+              <label for="dividaData">Data prevista <span class="campo-opcional">opcional</span></label>
+              <input id="dividaData" type="date" value="${divida?.dataPrevista || ""}">
+            </div>
+            <div class="campo-formulario campo-formulario--largura-total">
+              <label for="dividaObs">Observação <span class="campo-opcional">opcional</span></label>
+              <textarea id="dividaObs" maxlength="180">${escaparHtml(divida?.observacoes || "")}</textarea>
+            </div>
+          </div>
+          <div class="modal-acoes">
+            <button class="botao-secundario" type="button" data-fechar-modal>Cancelar</button>
+            <button class="botao-primario" style="width:auto" type="submit">Salvar</button>
+          </div>
+        </form>`);
+
+      overlay.querySelector("#formularioDivida").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const valor = Number(overlay.querySelector("#dividaValor").value);
+        if (valor <= 0) return;
+        const dados = {
+          pessoa: overlay.querySelector("#dividaPessoa").value.trim(),
+          descricao: overlay.querySelector("#dividaDescricao").value.trim(),
+          valor,
+          dataPrevista: overlay.querySelector("#dividaData").value || "",
+          observacoes: overlay.querySelector("#dividaObs").value.trim(),
+          updatedAt: Date.now()
+        };
+        try {
+          if (editando) {
+            await atualizarRegistro(uidAtual, "dividasReceber", divida.id, dados);
+            if (divida.status === "recebido" && divida.destino === "meta" && divida.metaIdDestino && divida.movimentoMetaId) {
+              await salvarRegistroComId(uidAtual, `metas/${divida.metaIdDestino}/movimentos`, divida.movimentoMetaId, {
+                valor,
+                data: divida.dataRecebimento || hojeIso(),
+                observacao: `Recebimento de ${dados.pessoa}: ${dados.descricao}`,
+                origem: "recebivel",
+                referenciaId: divida.id,
+                createdAt: divida.movimentoCreatedAt || divida.recebidoAt || Date.now(),
+                updatedAt: Date.now()
+              });
+            }
+          } else {
+            await adicionarRegistro(uidAtual, "dividasReceber", {
+              ...dados,
+              status: "pendente",
+              dataRecebimento: "",
+              destino: "",
+              metaIdDestino: "",
+              movimentoMetaId: "",
+              createdAt: Date.now()
+            });
+          }
+          fecharModal();
+          mostrarToast(editando ? "Valor atualizado." : "Valor a receber cadastrado.", "sucesso");
+        } catch (_) {
+          mostrarToast("Não foi possível salvar.", "erro");
+        }
+      });
+    }
+
+    function abrirConfirmacaoRecebimento(divida) {
+      const metasDisponiveis = metas.filter((meta) => (Number(meta.valorMeta) || 0) > valorAtualMeta(meta));
+      const overlay = abrirModal(`
+        <h3 class="modal-titulo">Recebimento de ${escaparHtml(divida.pessoa)}</h3>
+        <p class="modal-texto">${escaparHtml(divida.descricao)} · <strong class="numero">${formatarMoeda(divida.valor)}</strong></p>
+        <form id="formularioRecebimentoDivida">
+          <div class="grade-formulario">
+            <div class="campo-formulario">
+              <label for="dataRecebimentoDivida">Data do recebimento</label>
+              <input id="dataRecebimentoDivida" type="date" required value="${hojeIso()}">
+            </div>
+            <div class="campo-formulario">
+              <label for="destinoRecebimento">Destino do valor</label>
+              <select id="destinoRecebimento">
+                <option value="saldo">Deixar no saldo disponível</option>
+                ${metasDisponiveis.length ? '<option value="meta">Enviar para uma meta</option>' : ""}
+              </select>
+            </div>
+            <div class="campo-formulario campo-formulario--largura-total" id="campoMetaDestino" hidden>
+              <label for="metaDestino">Meta</label>
+              <select id="metaDestino">
+                ${metasDisponiveis.map((meta) => `<option value="${meta.id}">${escaparHtml(meta.nome)} · ${formatarMoeda(valorAtualMeta(meta))} de ${formatarMoeda(meta.valorMeta)}</option>`).join("")}
+              </select>
+            </div>
+          </div>
+          <div class="modal-acoes">
+            <button class="botao-secundario" type="button" data-fechar-modal>Cancelar</button>
+            <button class="botao-primario" style="width:auto" type="submit">Confirmar recebimento</button>
+          </div>
+        </form>`);
+
+      const destino = overlay.querySelector("#destinoRecebimento");
+      const campoMeta = overlay.querySelector("#campoMetaDestino");
+      destino.addEventListener("change", () => { campoMeta.hidden = destino.value !== "meta"; });
+
+      overlay.querySelector("#formularioRecebimentoDivida").addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const dataRecebimento = overlay.querySelector("#dataRecebimentoDivida").value;
+        const tipoDestino = destino.value;
+        const metaId = tipoDestino === "meta" ? overlay.querySelector("#metaDestino")?.value : "";
+        const movimentoMetaId = tipoDestino === "meta" ? `recebivel_${divida.id}` : "";
+        try {
+          if (tipoDestino === "meta" && metaId) {
+            await salvarRegistroComId(uidAtual, `metas/${metaId}/movimentos`, movimentoMetaId, {
+              valor: Number(divida.valor) || 0,
+              data: dataRecebimento,
+              observacao: `Recebimento de ${divida.pessoa}: ${divida.descricao}`,
+              origem: "recebivel",
+              referenciaId: divida.id,
+              createdAt: Date.now(),
+              updatedAt: Date.now()
+            });
+            await atualizarRegistro(uidAtual, "metas", metaId, { updatedAt: Date.now() });
+          }
+          await atualizarRegistro(uidAtual, "dividasReceber", divida.id, {
+            status: "recebido",
+            dataRecebimento,
+            destino: tipoDestino,
+            metaIdDestino: metaId || "",
+            movimentoMetaId,
+            recebidoAt: Date.now(),
+            updatedAt: Date.now()
+          });
+          fecharModal();
+          mostrarToast(tipoDestino === "meta" ? "Recebido e enviado para a meta." : "Recebimento confirmado.", "sucesso");
+        } catch (_) {
+          mostrarToast("Não foi possível confirmar o recebimento.", "erro");
+        }
+      });
+    }
+
+    async function reabrirDivida(divida) {
+      const confirmou = await confirmarExclusao(`Desfazer o recebimento de “${divida.descricao}”? O valor deixará de contar como recebido.`);
+      if (!confirmou) return;
+      try {
+        if (divida.destino === "meta" && divida.metaIdDestino && divida.movimentoMetaId) {
+          await removerRegistro(uidAtual, `metas/${divida.metaIdDestino}/movimentos`, divida.movimentoMetaId);
+          await atualizarRegistro(uidAtual, "metas", divida.metaIdDestino, { updatedAt: Date.now() });
+        }
+        await atualizarRegistro(uidAtual, "dividasReceber", divida.id, {
+          status: "pendente",
+          dataRecebimento: "",
+          destino: "",
+          metaIdDestino: "",
+          movimentoMetaId: "",
+          recebidoAt: 0,
+          updatedAt: Date.now()
+        });
+        mostrarToast("Recebimento desfeito.", "sucesso");
+      } catch (_) {
+        mostrarToast("Não foi possível desfazer o recebimento.", "erro");
+      }
+    }
+
+    listaRecebiveis.addEventListener("click", async (evento) => {
+      const botao = evento.target.closest("[data-acao]");
+      if (!botao) return;
+      const divida = dividasReceber.find((item) => item.id === botao.dataset.id);
+      if (!divida) return;
+
+      if (botao.dataset.acao === "editar-divida") abrirFormularioDivida(divida);
+      if (botao.dataset.acao === "receber-divida") abrirConfirmacaoRecebimento(divida);
+      if (botao.dataset.acao === "reabrir-divida") await reabrirDivida(divida);
+      if (botao.dataset.acao === "excluir-divida") {
+        const confirmou = await confirmarExclusao(`Excluir o valor a receber de ${divida.pessoa}?`);
+        if (!confirmou) return;
+        try {
+          if (divida.destino === "meta" && divida.metaIdDestino && divida.movimentoMetaId) {
+            await removerRegistro(uidAtual, `metas/${divida.metaIdDestino}/movimentos`, divida.movimentoMetaId);
+          }
+          await removerRegistro(uidAtual, "dividasReceber", divida.id);
+          mostrarToast("Registro excluído.", "sucesso");
+        } catch (_) {
+          mostrarToast("Não foi possível excluir.", "erro");
+        }
+      }
+    });
+
     observarUsuario((usuario) => {
       if (!usuario || uidAtual === usuario.uid) return;
       uidAtual = usuario.uid;
-
       observarLista(uidAtual, "receitas", (dados) => {
         receitas = paraLista(dados);
         atualizarCategoriasDisponiveis();
-        renderizarLista();
+        renderizarListaReceitas();
+      });
+      observarLista(uidAtual, "dividasReceber", (dados) => {
+        dividasReceber = paraLista(dados);
+        renderizarRecebiveis();
+      });
+      observarLista(uidAtual, "metas", (dados) => {
+        metas = paraLista(dados);
+        renderizarRecebiveis();
       });
     });
   </script>

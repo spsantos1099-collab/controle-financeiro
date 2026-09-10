@@ -3,12 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Relatórios · Controle Financeiro</title>
+  <link rel="icon" href="../assets/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <title>Relatórios · Fluxo — Controle financeiro pessoal</title>
   <script src="../js/theme-init.js"></script>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body data-protegida="true" data-raiz="../">
   <main class="container pagina-app pagina-relatorios">
+    <a class="marca-sistema" href="dashboard.html" aria-label="Fluxo — Controle financeiro pessoal">
+      <img src="../assets/fluxo-icon.png" alt="">
+      <span><strong>Fluxo</strong><small>Controle financeiro pessoal</small></span>
+    </a>
+
     <div class="topo-app">
       <div>
         <h1 class="topo-app__titulo">Relatórios</h1>
@@ -54,7 +62,7 @@
         <article><span>Recebido</span><strong class="numero valor-receita" id="relRecebido">R$ 0,00</strong></article>
         <article><span>Gasto total</span><strong class="numero valor-despesa" id="relGasto">R$ 0,00</strong></article>
         <article><span>Pago</span><strong class="numero" id="relPago">R$ 0,00</strong></article>
-        <article><span>Resultado realizado</span><strong class="numero" id="relResultado">R$ 0,00</strong></article>
+        <article><span>Saldo disponível</span><strong class="numero" id="relResultado">R$ 0,00</strong><small class="relatorio-resumo__apoio" id="relReservado">R$ 0,00 reservado em metas</small></article>
       </section>
 
       <section class="relatorio-grade-principal">
@@ -86,7 +94,7 @@
         <div class="relatorio-card__cabecalho"><div><h2>Comparativo mensal</h2><p>Uma linha por mês para facilitar a conferência.</p></div></div>
         <div class="tabela-responsiva">
           <table class="tabela-relatorio">
-            <thead><tr><th>Mês</th><th>Recebido</th><th>Despesas</th><th>Faturas</th><th>Total gasto</th><th>Pago</th><th>Resultado</th></tr></thead>
+            <thead><tr><th>Mês</th><th>Recebido</th><th>Despesas</th><th>Faturas</th><th>Total gasto</th><th>Pago</th><th>Reservado</th><th>Disponível</th></tr></thead>
             <tbody id="tabelaMensal"></tbody>
           </table>
         </div>
@@ -96,7 +104,7 @@
         <div class="relatorio-card__cabecalho"><div><h2>Comparativo anual</h2><p>Consolidação automática dos anos incluídos no período.</p></div></div>
         <div class="tabela-responsiva">
           <table class="tabela-relatorio">
-            <thead><tr><th>Ano</th><th>Recebido</th><th>Gasto total</th><th>Pago</th><th>Resultado realizado</th></tr></thead>
+            <thead><tr><th>Ano</th><th>Recebido</th><th>Gasto total</th><th>Pago</th><th>Reservado</th><th>Disponível</th></tr></thead>
             <tbody id="tabelaAnual"></tbody>
           </table>
         </div>
@@ -118,7 +126,8 @@
     let uidAtual = null;
     const dados = {
       receitas: [], despesas: [], cartoes: [], parcelas: [],
-      faturasManuais: [], acertosPessoas: [], pagamentosFaturas: []
+      faturasManuais: [], acertosPessoas: [], pagamentosFaturas: [],
+      metas: [], dividasReceber: []
     };
 
     const mesInicio = document.getElementById("mesInicio");
@@ -149,7 +158,9 @@
       const recebido = resumos.reduce((s, item) => s + item.receitasRecebidas, 0);
       const gasto = resumos.reduce((s, item) => s + item.totalComprometido, 0);
       const pago = resumos.reduce((s, item) => s + item.pago, 0);
-      const resultado = recebido - pago;
+      const reservado = resumos.reduce((s, item) => s + item.reservadoMetas, 0);
+      const impactoMetas = resumos.reduce((s, item) => s + item.impactoMetas, 0);
+      const resultado = recebido - pago - impactoMetas;
 
       document.getElementById("relRecebido").textContent = formatarMoeda(recebido);
       document.getElementById("relGasto").textContent = formatarMoeda(gasto);
@@ -157,6 +168,7 @@
       const elResultado = document.getElementById("relResultado");
       elResultado.textContent = formatarMoeda(resultado);
       elResultado.className = `numero ${resultado >= 0 ? "valor-receita" : "valor-despesa"}`;
+      document.getElementById("relReservado").textContent = `${formatarMoeda(Math.max(0, reservado))} reservado em metas`;
 
       criarGraficoLinha(document.getElementById("graficoEvolucao"), resumos.map((item) => ({
         label: rotuloMesCurto(item.mes), receita: item.receitasRecebidas, despesa: item.totalComprometido
@@ -190,7 +202,8 @@
           <td class="numero">${formatarMoeda(item.faturas)}</td>
           <td class="numero valor-despesa">${formatarMoeda(item.totalComprometido)}</td>
           <td class="numero">${formatarMoeda(item.pago)}</td>
-          <td class="numero ${item.saldoAtual >= 0 ? "valor-receita" : "valor-despesa"}">${formatarMoeda(item.saldoAtual)}</td>
+          <td class="numero">${formatarMoeda(item.reservadoMetas)}</td>
+          <td class="numero ${item.saldoDisponivel >= 0 ? "valor-receita" : "valor-despesa"}">${formatarMoeda(item.saldoDisponivel)}</td>
         </tr>`).join("");
 
       const anos = agruparPorAno(resumos).reverse();
@@ -200,7 +213,8 @@
           <td class="numero valor-receita">${formatarMoeda(item.receitasRecebidas)}</td>
           <td class="numero valor-despesa">${formatarMoeda(item.totalComprometido)}</td>
           <td class="numero">${formatarMoeda(item.pago)}</td>
-          <td class="numero ${item.resultado >= 0 ? "valor-receita" : "valor-despesa"}">${formatarMoeda(item.resultado)}</td>
+          <td class="numero">${formatarMoeda(item.reservadoMetas)}</td>
+          <td class="numero ${item.resultadoDisponivel >= 0 ? "valor-receita" : "valor-despesa"}">${formatarMoeda(item.resultadoDisponivel)}</td>
         </tr>`).join("");
     }
 
